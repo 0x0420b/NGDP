@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <server>
+    <user>casbot_dev</user>
+    <address>irc.rizon.net</address>
+    <port>6660</port>
+
+    <channel>
+      <name>tcbots</name>
+    </channel>
+  </server>
+</configuration>
