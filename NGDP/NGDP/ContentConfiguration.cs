@@ -8,45 +8,49 @@ using NGDP.Utilities;
 
 namespace NGDP.NGDP
 {
-    public class ContentConfiguration : AsyncClient
+    public class ContentConfiguration
     {
         public byte[][] Archives { get; private set; }
         // public string ArchiveGroup { get; private set; }
         // public string[] PatchArchives { get; private set; }
         // public string PatchArchiveGroup { get; private set; }
 
-        public ContentConfiguration(CDNs.Record hostInfo, byte[] contentHash) : base(hostInfo.Hosts[0])
+        public ContentConfiguration(CDNs.Record hostInfo, byte[] contentHash)
         {
-            var queryString = $"/{hostInfo.Path}/config/{contentHash[0]:x2}/{contentHash[1]:x2}/{contentHash.ToHexString()}";
-
-            Send(queryString);
-
-            using (var textReader = new StreamReader(Stream))
+            using (var asyncClient = new AsyncClient(hostInfo.Hosts[0]))
             {
-                var line = textReader.ReadLine();
-                if (line != "# CDN Configuration")
-                    return;
+                var queryString =
+                    $"/{hostInfo.Path}/config/{contentHash[0]:x2}/{contentHash[1]:x2}/{contentHash.ToHexString()}";
 
-                var elementList = new List<string>();
-                var currentElement = string.Empty;
+                asyncClient.Send(queryString);
 
-                while ((line = textReader.ReadLine()) != null)
+                using (var textReader = new StreamReader(asyncClient.Stream))
                 {
-                    if (string.IsNullOrEmpty(line))
-                        continue;
+                    var line = textReader.ReadLine();
+                    if (line != "# CDN Configuration")
+                        return;
 
-                    var lineTokens = line.Split(new[] {'=', ' '}, StringSplitOptions.RemoveEmptyEntries);
-                    var isIndexLine = line.Contains('=');
-                    if (isIndexLine)
+                    var elementList = new List<string>();
+                    var currentElement = string.Empty;
+
+                    while ((line = textReader.ReadLine()) != null)
                     {
-                        if (!string.IsNullOrEmpty(currentElement) && elementList.Count != 0)
-                            StoreElement(currentElement, elementList);
+                        if (string.IsNullOrEmpty(line))
+                            continue;
 
-                        currentElement = lineTokens[0];
-                        elementList.Clear();
+                        var lineTokens = line.Split(new[] {'=', ' '}, StringSplitOptions.RemoveEmptyEntries);
+                        var isIndexLine = line.Contains('=');
+                        if (isIndexLine)
+                        {
+                            if (!string.IsNullOrEmpty(currentElement) && elementList.Count != 0)
+                                StoreElement(currentElement, elementList);
+
+                            currentElement = lineTokens[0];
+                            elementList.Clear();
+                        }
+
+                        elementList.AddRange(isIndexLine ? lineTokens.Skip(1) : lineTokens);
                     }
-
-                    elementList.AddRange(isIndexLine ? lineTokens.Skip(1) : lineTokens);
                 }
             }
         }

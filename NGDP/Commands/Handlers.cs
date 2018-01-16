@@ -51,6 +51,13 @@ namespace NGDP.Commands
             Program.Unsubscribe(messageData.From);
         }
 
+        [CommandHandler("$unload", "")]
+        public static void Unload(IrcClient client, IrcMessageData messageData)
+        {
+            var buildInfo = RemoteBuildManager.GetBuild(messageData.MessageArray[1]);
+            buildInfo.Unload();
+        }
+
         [CommandHandler("$downloadfile", "$downloadfile <build name string> <filePath>")]
         public static void HandleDownloadFile(IrcClient client, IrcMessageData messageData)
         {
@@ -85,6 +92,8 @@ namespace NGDP.Commands
                     }
 
                     // Give out link
+                    // Disable resharper for readability
+                    // ReSharper disable once UseStringInterpolation
                     var response = string.Format("http://{0}/{1}/{2}/{3}",
                         Program.PUBLIC_DOMAIN,
                         buildInfo.VersionName,
@@ -124,7 +133,7 @@ namespace NGDP.Commands
         public static void HandleListBuilds(IrcClient client, IrcMessageData messageData)
         {
             foreach (var kv in RemoteBuildManager.Builds)
-                client.SendReply(messageData, kv.Value.Ready ? $"* {kv.Value.VersionName} [LOADED]" : $"* {kv.Value.VersionName}");
+                client.SendReply(messageData, $"* {kv.Value.VersionName}");
         }
 
         private static void CheckFileExists(string buildName,

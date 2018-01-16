@@ -9,4 +9,29 @@
       <name>tcbots</name>
     </channel>
   </server>
+
+  <branch>
+    <name>wow</name>
+    <description>Retail</description>
+  </branch>
+
+  <branch>
+    <name>wowt</name>
+    <description>PTR</description>
+  </branch>
+
+  <branch>
+    <name>wow_beta</name>
+    <description>Beta</description>
+  </branch>
+
+  <branch>
+    <name>wow_internal</name>
+    <description>Internal</description>
+  </branch>
+
+  <branch>
+    <name>wowdev</name>
+    <description>Development</description>
+  </branch>
 </configuration>

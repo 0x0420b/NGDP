@@ -4,36 +4,40 @@ using NGDP.Network;
 
 namespace NGDP.Patch
 {
-    public class Versions : AsyncClient
+    public class Versions
     {
         public Dictionary<string, Record> Records { get; } = new Dictionary<string,Record>();
 
-        public Versions(string channel) : base("us.patch.battle.net", 1119)
+        public Versions(string channel)
         {
-            LogRequest = false;
-            Send($"/{channel}/versions");
-
-            using (var reader = new StreamReader(Stream))
+            using (var asyncClient = new AsyncClient("us.patch.battle.net", 1119))
             {
-                // Skip header
-                // ReSharper disable once RedundantAssignment
-                var line = reader.ReadLine();
-                while ((line = reader.ReadLine()) != null)
+                asyncClient.LogRequest = false;
+
+                asyncClient.Send($"/{channel}/versions");
+
+                using (var reader = new StreamReader(asyncClient.Stream))
                 {
-                    var lineTokens = line.Split('|');
-
-                    Records[lineTokens[0]] = new Record
+                    // Skip header
+                    // ReSharper disable once RedundantAssignment
+                    var line = reader.ReadLine();
+                    while ((line = reader.ReadLine()) != null)
                     {
-                        Region = lineTokens[0],
-                        BuildConfig = BuildHash(lineTokens[1]),
-                        CDNConfig = BuildHash(lineTokens[2]),
-                        KeyRing = BuildHash(lineTokens[3]),
-                        BuildID = int.Parse(lineTokens[4]),
-                        VersionsName = lineTokens[5],
-                        ProductConfig = BuildHash(lineTokens[6]),
+                        var lineTokens = line.Split('|');
 
-                        Channel = channel
-                    };
+                        Records[lineTokens[0]] = new Record
+                        {
+                            Region = lineTokens[0],
+                            BuildConfig = BuildHash(lineTokens[1]),
+                            CDNConfig = BuildHash(lineTokens[2]),
+                            KeyRing = BuildHash(lineTokens[3]),
+                            BuildID = int.Parse(lineTokens[4]),
+                            VersionsName = lineTokens[5],
+                            ProductConfig = BuildHash(lineTokens[6]),
+
+                            Channel = channel
+                        };
+                    }
                 }
             }
         }

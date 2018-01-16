@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading;
+using System.Runtime;
 using System.Threading.Tasks;
 using NGDP.NGDP;
 using NGDP.Patch;
@@ -23,8 +23,9 @@ namespace NGDP.Local
         public string VersionName { get; set; }
 
         public event Action OnReady;
-        public bool Ready { get; private set; }
         public bool Loading { get; private set; }
+
+        public bool Ready => Encoding.Count != 0 && Root.Count != 0;
 
         public async void Prepare(bool downloadFiles = false)
         {
@@ -40,7 +41,7 @@ namespace NGDP.Local
                     $"/{ServerInfo.Path}/data/{BuildConfiguration.Encoding[1][0]:x2}/{BuildConfiguration.Encoding[1][1]:x2}/{BuildConfiguration.Encoding[1].ToHexString()}");
                 Program.WriteLine($"[{VersionName}] Encoding downloaded ({Encoding.Count} entries).");
 
-                if (!Encoding.TryGetValue(BuildConfiguration.Root, out Encoding.Entry rootEncodingEntry))
+                if (!Encoding.TryGetValue(BuildConfiguration.Root, out var rootEncodingEntry))
                     return;
 
                 Program.WriteLine($"[{VersionName}] Downloading root {rootEncodingEntry.Key.ToHexString()} ...");
@@ -50,21 +51,21 @@ namespace NGDP.Local
 
                 Program.WriteLine($"[{VersionName}] Downloading {ContentConfiguration.Archives.Length} indices ...");
                 Indices.FromStream(ServerInfo.Hosts[0], ContentConfiguration.Archives);
-                Program.WriteLine($"[{VersionName}] Indices downloaded ({Indices.Records.Count} entries).");
+                Program.WriteLine($"[{VersionName}] Indices downloaded ({Indices.Count} entries).");
 
-                Action<string, string, byte[]> installLoader = (string host, string path, byte[] hash) =>
+                void InstallLoader(string host, string path, byte[] hash)
                 {
                     Program.WriteLine($"[CASC] Trying to load Install {hash.ToHexString()} ...");
 
                     Install.FromNetworkResource(host,
                         $"/{path}/data/{hash[0]:x2}/{hash[1]:x2}/{hash.ToHexString()}");
-                };
+                }
 
-                installLoader(ServerInfo.Hosts[0], ServerInfo.Path, BuildConfiguration.Install[1]);
+                InstallLoader(ServerInfo.Hosts[0], ServerInfo.Path, BuildConfiguration.Install[1]);
                 if (!Install.Loaded)
                 {
-                    if (Encoding.TryGetValue(BuildConfiguration.Install[0], out Encoding.Entry encodingEntry))
-                        installLoader(ServerInfo.Hosts[0], ServerInfo.Path, encodingEntry.Key);
+                    if (Encoding.TryGetValue(BuildConfiguration.Install[0], out var encodingEntry))
+                        InstallLoader(ServerInfo.Hosts[0], ServerInfo.Path, encodingEntry.Key);
                     else
                         Program.WriteLine($"[{VersionName}] Install file not found!");
                 }
@@ -73,7 +74,6 @@ namespace NGDP.Local
                     Program.WriteLine($"[{VersionName}] Install downloaded ({Install.Count} entries).");
             }).ConfigureAwait(false);
 
-            Ready = true;
             Loading = false;
             OnReady?.Invoke();
 
@@ -96,27 +96,25 @@ namespace NGDP.Local
 
         public void Unload()
         {
-            if (!Ready)
+            // Don't empty if loading
+            if (Loading)
                 return;
 
-            Ready = false;
             Encoding.Clear();
             Root.Clear();
             Indices.Clear();
 
-            GC.Collect(3, GCCollectionMode.Forced);
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(2, GCCollectionMode.Forced);
         }
 
         public IndexStore.Record GetEntry(string fileName) => GetEntry(JenkinsHashing.Instance.ComputeHash(fileName));
 
         public IndexStore.Record GetEntry(ulong fileHash)
         {
-            if (!Ready)
-                return null;
-
             Encoding.Entry encodingRecord;
 
-            if (Root.TryGetByHash(fileHash, out Root.Record rootRecord))
+            if (Root.TryGetByHash(fileHash, out var rootRecord))
             {
                 if (!Encoding.TryGetValue(rootRecord.MD5, out encodingRecord))
                     return null;
@@ -130,7 +128,7 @@ namespace NGDP.Local
             else
                 return null;
 
-            if (!Indices.TryGetValue(encodingRecord.Key, out IndexStore.Record indexEntry))
+            if (!Indices.TryGetValue(encodingRecord.Key, out var indexEntry))
             {
                 return new IndexStore.Record
                 {
@@ -149,9 +147,13 @@ namespace NGDP.Local
             if (!string.Equals(localFileName, @"\"))
                 localFileName = Path.GetFileName(remoteFileName);
 
+#if UNIX
             var completeFilePath = Path.Combine("/home/ubuntu/workspace/backups", VersionName, localFileName);
+#else
+            var completeFilePath = Path.Combine(VersionName, localFileName);
+#endif
             Directory.CreateDirectory(Path.GetDirectoryName(completeFilePath));
-            
+
             if (File.Exists(completeFilePath))
                 return;
             

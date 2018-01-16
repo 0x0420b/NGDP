@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Runtime;
 using NGDP.Utilities;
 
 namespace NGDP.NGDP
@@ -90,6 +92,9 @@ namespace NGDP.NGDP
             }
 
             Loaded = true;
+
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(2, GCCollectionMode.Forced);
         }
 
         public class Entry

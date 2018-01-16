@@ -42,11 +42,12 @@ namespace NGDP.NGDP
                             records[i] = new Record();
                             // records[i].LocaleFlags = localeFlags;
                             // records[i].ContentFlags = contentFlags;
-
-                            fileReader.BaseStream.Seek(4, SeekOrigin.Current); // Skip FileDataID
+                            
                             // records[i].FileDataID = fileDataIndex + fileReader.ReadInt32();
                             // fileDataIndex = records[i].FileDataID + 1;
                         }
+
+                        fileReader.BaseStream.Seek(4 * recordCount, SeekOrigin.Current); // Skip FileDataIDs.
 
                         for (var i = 0; i < recordCount; ++i)
                         {
@@ -65,7 +66,7 @@ namespace NGDP.NGDP
         public class Record
         {
             public int MD5 { get; set; }
-            /// public ulong Hash { get; set; }
+            // public ulong Hash { get; set; }
             // public int FileDataID { get; set; }
             // public int ContentFlags { get; set; }
             // public int LocaleFlags { get; set; }

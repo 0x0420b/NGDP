@@ -16,7 +16,7 @@ namespace NGDP.Network
         private HttpListener _listener;
 
         public int Port { get; private set; }
-        private string _domain = "*";
+        private string _domain { get; } = "*";
 
         /// <summary>
         /// Construct server with given port.

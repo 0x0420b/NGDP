@@ -9,7 +9,7 @@ using NGDP.Utilities;
 
 namespace NGDP.NGDP
 {
-    public class BLTE : Stream
+    public class BLTE : Stream, IDisposable
     {
         private AsyncClient _client;
         private EndianBinaryReader _networkReader;
@@ -122,6 +122,13 @@ namespace NGDP.NGDP
         public BLTE(string host)
         {
             _client = new AsyncClient(host);
+        }
+
+        public new void Dispose()
+        {
+            _client.Dispose();
+
+            base.Dispose();
         }
 
         public void AddHeader(string headerKey, string headerValue) => _client.RequestHeaders.Add(headerKey, headerValue);

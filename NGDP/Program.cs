@@ -7,9 +7,7 @@ using Meebey.SmartIrc4net;
 using NGDP.Commands;
 using NGDP.Local;
 using NGDP.Network;
-using System.Text;
 using System.IO;
-using System.Xml;
 using System.Xml.Serialization;
 using System.Linq;
 #if !UNIX
@@ -47,9 +45,22 @@ namespace NGDP
             [XmlElement("key")]
             public string Key { get; set; }
         }
+
+        [Serializable]
+        public class BranchInfo
+        {
+            [XmlElement("name")]
+            public string Name { get; set; }
+
+            [XmlElement("description")]
+            public string Description { get; set; }
+        }
         
         [XmlElement("server")]
         public List<ServerInfo> Servers { get; set; }
+
+        [XmlElement("branch")]
+        public List<BranchInfo> Branches { get; set; }
     }
     
     internal static class Program
@@ -80,6 +91,7 @@ namespace NGDP
 
         static void Main(string[] args)
         {
+#if !UNIX && !DEBUG
             if (args.Length == 0)
             {
                 Console.WriteLine("Arguments:");
@@ -93,8 +105,9 @@ namespace NGDP
                 Console.WriteLine("--hasHttp, -h        Control wether or not http as active. Overrides any other implicit setting.");
                 return;
             }
+#endif
 
-            #if !UNIX
+#if !UNIX
             // Setup console
             StyleSheet = new StyleSheet(Color.White);
             StyleSheet.AddStyle(@"\[[0-9\/]+] [0-9:]+\ ?[AP]?M?]", Color.LightSkyBlue);
@@ -103,42 +116,9 @@ namespace NGDP
             StyleSheet.AddStyle(@" [0-9]+ ", Color.LightGreen);
             StyleSheet.AddStyle(@"#[-az0-9_-]", Color.DarkGreen);
             StyleSheet.AddStyle(@" [a-f0-9]{32}", Color.Orange);
-            #endif
+#endif
 
             _startupArguments = args;
-
-            #region Create channel monitors
-            Channels.Clear();
-            Channels.Add(new Channel {
-                ChannelName = "wow",
-                DisplayName = "Retail",
-            });
-
-            Channels.Add(new Channel {
-                ChannelName = "wowt",
-                DisplayName = "PTR",
-            });
-
-            Channels.Add(new Channel {
-                ChannelName = "wow_beta",
-                DisplayName = "Beta",
-            });
-
-            Channels.Add(new Channel
-            {
-                ChannelName = "wow_internal",
-                DisplayName = "Internal",
-            });
-
-            Channels.Add(new Channel
-            {
-                ChannelName = "wowdev",
-                DisplayName = "Development",
-            });
-            #endregion
-
-            foreach (var channel in Channels)
-                channel.MessageEvent += OnMessageEvent;
 
             Console.CancelKeyPress += (s, ea) => {
                 Program.WriteLine("[ERROR] Aborting ...");
@@ -148,12 +128,24 @@ namespace NGDP
 
                 _token.Cancel();
             };
-            
+
+            #region Load XML configuration file
             var configurationFileName = GetStringParam("--conf", "-c", "conf.xml");
             var serializer = new XmlSerializer(typeof(Configuration));
             using (var reader = new StreamReader(configurationFileName))
                 Configuration = (Configuration)serializer.Deserialize(reader);
+            #endregion
 
+            // Read channels from XML
+            foreach (var channelInfo in Configuration.Branches)
+            {
+                var newChannel = new Channel() {ChannelName = channelInfo.Name, DisplayName = channelInfo.Description};
+                newChannel.MessageEvent += OnMessageEvent;
+
+                Channels.Add(newChannel);
+            }
+
+            // Read command line arguments
             var autodownloadList = GetStringParam("--autoDownload", "-auto", null);
             
             PUBLIC_DOMAIN = GetStringParam("--httpDomain", "-d", "ngdp-warpten.c9users.io");
@@ -197,6 +189,7 @@ namespace NGDP
                 Task.Factory.StartNew(() => { _httpServer = new HttpServer(httpPort); });
             }
 
+            // Setup IRC clients
             foreach (var serverInfo in Configuration.Servers)
             {
                 WriteLine("[IRC] Connecting to {0}:{1}", serverInfo.Address, serverInfo.Port);
@@ -221,6 +214,7 @@ namespace NGDP
                     else
                         client.RfcJoin("#" + channelInfo.Name, channelInfo.Key);
                 }
+
                 Task.Run(() => { client.Listen(); });
                 
                 _clients[serverInfo.Address] = client;
@@ -276,13 +270,13 @@ namespace NGDP
                     foreach (var channel in Channels)
                     {
                         channel.Update(silent);
-#if !UNIX
+#if !UNIX && DEBUG
                         break;
 #endif
                     }
                     silent = false;
 
-#if !UNIX
+#if !UNIX && DEBUG
                     break;
 #endif
                     Thread.Sleep(30000);
@@ -326,11 +320,11 @@ namespace NGDP
         {
             var subfmt = $"[{DateTime.Now}] {fmt}";
 
-            #if UNIX
+#if UNIX
             Console.WriteLine(subfmt, args);
-            #else
+#else
             Console.WriteLineStyled(StyleSheet, subfmt, args);
-            #endif
+#endif
         }
 
         public static void Subscribe(string userName, string channel)

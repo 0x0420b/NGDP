@@ -73,28 +73,13 @@ namespace NGDP.Network
         }
 
         #region IDisposable Support
-        private bool disposedValue; // To detect redundant calls
-
-        private void Dispose(bool disposing)
-        {
-            if (disposedValue)
-                return;
-
-            if (disposing)
-            {
-                Stream?.BaseStream.Close();
-                Stream = null;
-
-                _client?.Close();
-                _client = null;
-            }
-
-            disposedValue = true;
-        }
-
         public void Dispose()
         {
-            Dispose(false);
+            Stream?.BaseStream.Close();
+            Stream = null;
+
+            _client?.Close();
+            _client = null;
         }
         #endregion
     }

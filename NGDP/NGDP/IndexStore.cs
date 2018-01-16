@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime;
 using System.Threading.Tasks;
 using NGDP.Network;
 using NGDP.Utilities;
@@ -10,7 +11,7 @@ namespace NGDP.NGDP
 {
     public class IndexStore
     {
-        public Dictionary<int, Record> Records { get; } = new Dictionary<int, Record>(200000);
+        private Dictionary<int, Record> Records { get; } = new Dictionary<int, Record>(1000);
 
         public byte[][] Archives { get; private set; }
 
@@ -75,6 +76,9 @@ namespace NGDP.NGDP
                     }
                 }
             });
+
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(2, GCCollectionMode.Forced);
         }
 
         public class Record
