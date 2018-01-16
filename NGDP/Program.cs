@@ -80,6 +80,20 @@ namespace NGDP
 
         static void Main(string[] args)
         {
+            if (args.Length == 0)
+            {
+                Console.WriteLine("Arguments:");
+                Console.WriteLine("--conf, -c           Path the xml configuration file.");
+                Console.WriteLine("--autodownload, -a   List of files to autodownload.");
+                Console.WriteLine("--httpDomain, -d     Domain name where the bot can be reached.");
+                Console.WriteLine("--bindAddr, -b       Address to bind the HTTP server to (typically 0.0.0.0)");
+                Console.WriteLine("                     Implities --hasHttp");
+                Console.WriteLine("--bindPort, -p       Public port to bind the HTTP server on.");
+                Console.WriteLine("                     Implities --hasHttp");
+                Console.WriteLine("--hasHttp, -h        Control wether or not http as active. Overrides any other implicit setting.");
+                return;
+            }
+
             #if !UNIX
             // Setup console
             StyleSheet = new StyleSheet(Color.White);
@@ -141,7 +155,7 @@ namespace NGDP
                 Configuration = (Configuration)serializer.Deserialize(reader);
 
             var autodownloadList = GetStringParam("--autoDownload", "-auto", null);
-
+            
             PUBLIC_DOMAIN = GetStringParam("--httpDomain", "-d", "ngdp-warpten.c9users.io");
             var bindAddr = GetStringParam("--bindAddr", "-a", "0.0.0.0");
             var httpPort = GetIntParam("--bindPort", "-h", 8080);
