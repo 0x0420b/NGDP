@@ -1,6 +1,8 @@
 # NGDP
 An ugly bot that monitors client builds. Tries to eat as little memory as possible.
 
+Yes, it builds on mono.
+
 ## What. How.
 
 This bot connects to IRC servers. Listens to a few commands. HTTP server is an option if you want to proxy downloading files from Blizzard's CDNs.
