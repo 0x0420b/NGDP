@@ -147,13 +147,21 @@ namespace NGDP.Local
             return indexEntry;
         }
 
-        public async void DownloadFile(string remoteFileName, string localFileName)
+        public void DownloadFile(string remoteFileName, string localFileName)
         {
             if (!string.Equals(localFileName, @"\") || string.IsNullOrEmpty(localFileName))
                 localFileName = Path.GetFileName(remoteFileName);
+
+            if (string.IsNullOrEmpty(localFileName))
+                return;
             
             var completeFilePath = Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, VersionName, localFileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(completeFilePath));
+            var fileDirectory = Path.GetDirectoryName(completeFilePath);
+            if (string.IsNullOrEmpty(fileDirectory))
+                return;
+
+            if (!Directory.CreateDirectory(fileDirectory).Exists)
+                return;
 
             if (File.Exists(completeFilePath))
                 return;
@@ -162,23 +170,20 @@ namespace NGDP.Local
             if (fileEntry == null)
                 return;
 
-            await Task.Run(() =>
+            using (var blte = new BLTE(ServerInfo.Hosts[0]))
             {
-                using (var blte = new BLTE(ServerInfo.Hosts[0]))
-                {
-                    if (fileEntry.ArchiveIndex != -1)
-                        blte.AddHeader("Range", $"bytes={fileEntry.Offset}-{fileEntry.Offset + fileEntry.Size - 1}");
+                if (fileEntry.ArchiveIndex != -1)
+                    blte.AddHeader("Range", $"bytes={fileEntry.Offset}-{fileEntry.Offset + fileEntry.Size - 1}");
 
-                    var archiveName = fileEntry.Hash.ToHexString();
-                    if (fileEntry.ArchiveIndex != -1)
-                        archiveName = Indices.Archives[fileEntry.ArchiveIndex].ToHexString();
+                var archiveName = fileEntry.Hash.ToHexString();
+                if (fileEntry.ArchiveIndex != -1)
+                    archiveName = Indices.Archives[fileEntry.ArchiveIndex].ToHexString();
 
-                    blte.Send($"/{ServerInfo.Path}/data/{archiveName.Substring(0, 2)}/{archiveName.Substring(2, 2)}/{archiveName}");
+                blte.Send($"/{ServerInfo.Path}/data/{archiveName.Substring(0, 2)}/{archiveName.Substring(2, 2)}/{archiveName}");
 
-                    using (var fileStream = File.OpenWrite(completeFilePath))
-                        blte.PipeTo(fileStream);
-                }
-            });
+                using (var fileStream = File.OpenWrite(completeFilePath))
+                    blte.PipeTo(fileStream);
+            }
         }
     }
 }
