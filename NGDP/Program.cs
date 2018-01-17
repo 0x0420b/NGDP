@@ -9,7 +9,6 @@ using NGDP.Local;
 using NGDP.Network;
 using System.IO;
 using System.Xml.Serialization;
-using System.Linq;
 using System.Collections.Concurrent;
 using NGDP.Xml;
 #if !UNIX

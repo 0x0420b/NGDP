@@ -5,9 +5,7 @@
     <address>irc.rizon.net</address>
     <port>6660</port>
 
-    <channel>
-      <name>tcbots</name>
-    </channel>
+    <channel key="12345">your-channel-name</channel>
   </server>
 
   <proxy>
