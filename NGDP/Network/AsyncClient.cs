@@ -75,7 +75,7 @@ namespace NGDP.Network
         #region IDisposable Support
         public void Dispose()
         {
-            Stream?.BaseStream.Close();
+            Stream?.Dispose();
             Stream = null;
 
             _client?.Close();

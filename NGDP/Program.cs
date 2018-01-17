@@ -41,11 +41,6 @@ namespace NGDP
         public static List<Channel> Channels { get; } = new List<Channel>();
 
         /// <summary>
-        /// Returns true if the HTTP proxy is enabled.
-        /// </summary>
-        public static bool HasProxy => Proxy != null;
-
-        /// <summary>
         /// The HTTP proxy itself.
         /// </summary>
         public static HttpServer Proxy { get; private set; }
@@ -269,6 +264,5 @@ namespace NGDP
         {
             _subscribers.Remove(userName);
         }
-        
     }
 }

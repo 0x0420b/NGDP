@@ -67,7 +67,7 @@ namespace NGDP.Commands
                 return;
             }
 
-            if (!Scanner.HasProxy)
+            if (!Scanner.Configuration.Proxy.Enabled)
             {
                 client.SendReply(messageData, "Command disabled.");
                 return;

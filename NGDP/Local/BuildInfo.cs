@@ -86,7 +86,12 @@ namespace NGDP.Local
                 await Task.Run(() =>
                 {
                     foreach (var kv in Scanner.Configuration.GetBranchInfo(VersionName).AutoDownloads)
+                    {
                         DownloadFile(kv.Value, kv.LocalName);
+                        // If we see an exe, be horribly gullible and hope for a PDB
+                        if (kv.Value.Contains(".exe"))
+                            DownloadFile(kv.Value.Replace(".exe", ".pdb"), kv.LocalName.Replace(".exe", ".pdb"));
+                    }
 
                     // Immediately free
                     Unload();
