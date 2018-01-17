@@ -67,9 +67,9 @@ namespace NGDP.Network
             if (!LogRequest)
                 return;
         
-            Program.WriteLine("[HTTP] Requesting http://{0}{1} (Status code {2})", _host, queryString, StatusCode);
+            Scanner.WriteLine("[HTTP] Requesting http://{0}{1} (Status code {2})", _host, queryString, StatusCode);
             // foreach (var responseHeader in ResponseHeaders.AllKeys)
-            //     Program.WriteLine("[HTTP] {0}: {1}", responseHeader, ResponseHeaders[responseHeader]);
+            //     Scanner.WriteLine("[HTTP] {0}: {1}", responseHeader, ResponseHeaders[responseHeader]);
         }
 
         #region IDisposable Support

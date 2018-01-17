@@ -80,6 +80,10 @@
     <Compile Include="Commands\CommandHandlerAttribute.cs" />
     <Compile Include="Commands\Dispatcher.cs" />
     <Compile Include="Commands\Handlers.cs" />
+    <Compile Include="Xml\AutoDownloadInfo.cs" />
+    <Compile Include="Xml\BranchInfo.cs" />
+    <Compile Include="Xml\Channel.cs" />
+    <Compile Include="Xml\Configuration.cs" />
     <Compile Include="Local\BuildInfo.cs" />
     <Compile Include="Local\RemoteBuildManager.cs" />
     <Compile Include="Network\AsyncClient.cs" />
@@ -105,6 +109,8 @@
     <Compile Include="Utilities\LittleEndianBitConverter.cs" />
     <Compile Include="Utilities\NonClosingStreamWrapper.cs" />
     <Compile Include="Utilities\UnbuffuredStreamReader.cs" />
+    <Compile Include="Xml\ProxyOptions.cs" />
+    <Compile Include="Xml\ServerInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -119,6 +125,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

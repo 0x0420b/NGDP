@@ -10,28 +10,37 @@
     </channel>
   </server>
 
-  <branch>
-    <name>wow</name>
-    <description>Retail</description>
+  <proxy>
+    <!-- If omitted, HTTP proxy is disabled -->
+    <public-domain-name>www.please-suffer.com</public-domain-name>
+
+    <!-- If omitted, defaults to 8080. -->
+    <bind-port>8080</bind-port>
+    <!-- If omitted, defaults to 0.0.0.0. -->
+    <endpoint>0.0.0.0</endpoint>
+
+    <!-- If omitted, defaults to CWD. -->
+    <local-mirror-root>./</local-mirror-root>
+  </proxy>
+
+  <branch name="wow" description="Retail">
+    <auto-download>Wow.exe</auto-download>
+    <auto-download>Wow-64.exe</auto-download>
+    <auto-download local-name="World of Warcraft">World of Warcraft.app\Contents\MacOS\World of Warcraft</auto-download>
   </branch>
 
-  <branch>
-    <name>wowt</name>
-    <description>PTR</description>
+  <branch name="wowt" description="PTR">
+    <auto-download>WowT.exe</auto-download>
+    <auto-download>WowT-64.exe</auto-download>
+    <auto-download local-name="World of Warcraft Test">World of Warcraft Test.app\Contents\MacOS\World of Warcraft</auto-download>
   </branch>
 
-  <branch>
-    <name>wow_beta</name>
-    <description>Beta</description>
+  <branch name="wow_beta" description="Beta">
+    <auto-download>WowB.exe</auto-download>
+    <auto-download>WowB-64.exe</auto-download>
+    <auto-download local-name="World of Warcraft Beta">World of Warcraft Beta.app\Contents\MacOS\World of Warcraft</auto-download>
   </branch>
 
-  <branch>
-    <name>wow_internal</name>
-    <description>Internal</description>
-  </branch>
-
-  <branch>
-    <name>wowdev</name>
-    <description>Development</description>
-  </branch>
+  <branch name="wow_internal" description="Internal" />
+  <branch name="wowdev" description="Development" />
 </configuration>

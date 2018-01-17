@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime;
+using System.Threading;
 using System.Threading.Tasks;
 using NGDP.NGDP;
 using NGDP.Patch;
@@ -20,6 +21,7 @@ namespace NGDP.Local
         public ContentConfiguration ContentConfiguration { get; set; }
         public CDNs.Record ServerInfo { get; set; }
 
+        public string Channel { get; set; }
         public string VersionName { get; set; }
 
         public event Action OnReady;
@@ -27,8 +29,11 @@ namespace NGDP.Local
 
         public bool Ready => Encoding.Count != 0 && Root.Count != 0;
 
-        public async void Prepare(bool downloadFiles = false)
+        public async Task Prepare(bool downloadFiles = false)
         {
+            if (File.Exists(Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, VersionName, ".skip")))
+                return;
+
             if (Loading)
                 return;
 
@@ -36,26 +41,26 @@ namespace NGDP.Local
 
             await Task.Run(() =>
             {
-                Program.WriteLine($"[{VersionName}] Downloading encoding {BuildConfiguration.Encoding[1].ToHexString()} ...");
+                Scanner.WriteLine($"[{VersionName}] Downloading encoding {BuildConfiguration.Encoding[1].ToHexString()} ...");
                 Encoding.FromNetworkResource(ServerInfo.Hosts[0],
                     $"/{ServerInfo.Path}/data/{BuildConfiguration.Encoding[1][0]:x2}/{BuildConfiguration.Encoding[1][1]:x2}/{BuildConfiguration.Encoding[1].ToHexString()}");
-                Program.WriteLine($"[{VersionName}] Encoding downloaded ({Encoding.Count} entries).");
+                Scanner.WriteLine($"[{VersionName}] Encoding downloaded ({Encoding.Count} entries).");
 
                 if (!Encoding.TryGetValue(BuildConfiguration.Root, out var rootEncodingEntry))
                     return;
 
-                Program.WriteLine($"[{VersionName}] Downloading root {rootEncodingEntry.Key.ToHexString()} ...");
+                Scanner.WriteLine($"[{VersionName}] Downloading root {rootEncodingEntry.Key.ToHexString()} ...");
                 Root.FromStream(ServerInfo.Hosts[0],
                     $"/{ServerInfo.Path}/data/{rootEncodingEntry.Key[0]:x2}/{rootEncodingEntry.Key[1]:x2}/{rootEncodingEntry.Key.ToHexString()}");
-                Program.WriteLine($"[{VersionName}] Root downloaded.");
+                Scanner.WriteLine($"[{VersionName}] Root downloaded.");
 
-                Program.WriteLine($"[{VersionName}] Downloading {ContentConfiguration.Archives.Length} indices ...");
+                Scanner.WriteLine($"[{VersionName}] Downloading {ContentConfiguration.Archives.Length} indices ...");
                 Indices.FromStream(ServerInfo.Hosts[0], ContentConfiguration.Archives);
-                Program.WriteLine($"[{VersionName}] Indices downloaded ({Indices.Count} entries).");
+                Scanner.WriteLine($"[{VersionName}] Indices downloaded ({Indices.Count} entries).");
 
                 void InstallLoader(string host, string path, byte[] hash)
                 {
-                    Program.WriteLine($"[CASC] Trying to load Install {hash.ToHexString()} ...");
+                    Scanner.WriteLine($"[CASC] Trying to load Install {hash.ToHexString()} ...");
 
                     Install.FromNetworkResource(host,
                         $"/{path}/data/{hash[0]:x2}/{hash[1]:x2}/{hash.ToHexString()}");
@@ -67,11 +72,11 @@ namespace NGDP.Local
                     if (Encoding.TryGetValue(BuildConfiguration.Install[0], out var encodingEntry))
                         InstallLoader(ServerInfo.Hosts[0], ServerInfo.Path, encodingEntry.Key);
                     else
-                        Program.WriteLine($"[{VersionName}] Install file not found!");
+                        Scanner.WriteLine($"[{VersionName}] Install file not found!");
                 }
 
                 if (Install.Loaded)
-                    Program.WriteLine($"[{VersionName}] Install downloaded ({Install.Count} entries).");
+                    Scanner.WriteLine($"[{VersionName}] Install downloaded ({Install.Count} entries).");
             }).ConfigureAwait(false);
 
             Loading = false;
@@ -79,18 +84,14 @@ namespace NGDP.Local
 
             if (downloadFiles && Install.Loaded)
             {
-#if UNIX
-                await Task.Factory.StartNew(() =>
+                await Task.Run(() =>
                 {
-                    foreach (var kv in Program.FilesToDownload)
-                        DownloadFile(kv.Key, kv.Value);
+                    foreach (var kv in Scanner.Configuration.GetBranchInfo(VersionName).AutoDownloads)
+                        DownloadFile(kv.Value, kv.LocalName);
 
                     // Immediately free
                     Unload();
                 });
-#else
-                DownloadFile("Wow.exe", "Wow.exe");
-#endif
             }
         }
 
@@ -144,14 +145,10 @@ namespace NGDP.Local
 
         public async void DownloadFile(string remoteFileName, string localFileName)
         {
-            if (!string.Equals(localFileName, @"\"))
+            if (!string.Equals(localFileName, @"\") || string.IsNullOrEmpty(localFileName))
                 localFileName = Path.GetFileName(remoteFileName);
-
-#if UNIX
-            var completeFilePath = Path.Combine("/home/ubuntu/workspace/backups", VersionName, localFileName);
-#else
-            var completeFilePath = Path.Combine(VersionName, localFileName);
-#endif
+            
+            var completeFilePath = Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, localFileName);
             Directory.CreateDirectory(Path.GetDirectoryName(completeFilePath));
 
             if (File.Exists(completeFilePath))
@@ -161,7 +158,7 @@ namespace NGDP.Local
             if (fileEntry == null)
                 return;
 
-            await Task.Factory.StartNew(() =>
+            await Task.Run(() =>
             {
                 using (var blte = new BLTE(ServerInfo.Hosts[0]))
                 {

@@ -32,6 +32,7 @@ namespace NGDP
                     continue;
 
                 var buildInfo = new BuildInfo {
+                    Channel = versionInfo.Value.Channel,
                     VersionName = versionName,
                     ServerInfo = serverInfo
                 };
@@ -50,12 +51,8 @@ namespace NGDP
                     if (!silent)
                         MessageEvent?.Invoke(SendType.Message, $"Error retrieving either CDN or build configuration file for {versionName}.");
                 }
-                // else
-                //     buildInfo.Prepare(true);
-
-#if !UNIX
-                break;
-#endif
+                else
+                    Scanner.QueueInitialUpdate(buildInfo);
             }
 
             // Sleep one second to make sure every message goes through.

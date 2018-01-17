@@ -1,9 +1,9 @@
-﻿using System;
-using System.IO;
+﻿using System;using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using NGDP.Local;
 using NGDP.NGDP;
 using NGDP.Utilities;
@@ -12,38 +12,31 @@ namespace NGDP.Network
 {
     public class HttpServer
     {
-        private Thread _serverThread;
+        private CancellationTokenSource _token;
         private HttpListener _listener;
 
         public int Port { get; private set; }
-        private string _domain { get; } = "*";
+        public string PublicDomain { get; }
+        public string LocalDomain { get; }
 
-        /// <summary>
-        /// Construct server with given port.
-        /// </summary>
-        /// <param name="port">Port of the server.</param>
-        public HttpServer(int port)
+        public HttpServer(string localAddress, string publicDomain)
         {
-            Initialize(port);
-        }
-        
-        public HttpServer(string address, int port)
-        {
-            _domain = address;
-            Initialize(port);
+            LocalDomain = localAddress;
+            PublicDomain = publicDomain;
         }
 
         /// <summary>
         /// Construct server with suitable port.
         /// </summary>
-        public HttpServer()
+        public void Listen(CancellationTokenSource token)
         {
-            // get an empty port
-            var l = new TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            var port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            Initialize(port);
+            // Get an empty port
+            var tcpListener = new TcpListener(IPAddress.Loopback, 0);
+            tcpListener.Start();
+            var port = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
+            tcpListener.Stop();
+
+            Listen(port, token);
         }
 
         /// <summary>
@@ -51,28 +44,34 @@ namespace NGDP.Network
         /// </summary>
         public void Stop()
         {
-            _serverThread.Abort();
+            _token.Cancel();
             _listener.Stop();
         }
 
-        private void Listen()
+        public void Listen(int port, CancellationTokenSource token)
         {
-            _listener = new HttpListener();
-            _listener.Prefixes.Add("http://" + _domain + ":" + Port + "/");
-            _listener.Start();
+            Port = port;
+            _token = token;
 
-            while (true)
+            Task.Run(() =>
             {
-                try
+                _listener = new HttpListener();
+                _listener.Prefixes.Add("http://" + LocalDomain + ":" + Port + "/");
+                _listener.Start();
+
+                while (!token.IsCancellationRequested)
                 {
-                    var context = _listener.GetContext();
-                    Process(context);
+                    try
+                    {
+                        var context = _listener.GetContext();
+                        Process(context);
+                    }
+                    catch (Exception ex)
+                    {
+                        Scanner.WriteLine(ex.ToString());
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Program.WriteLine(ex.ToString());
-                }
-            }
+            }, token.Token);
         }
 
         private static void WriteError(HttpListenerContext context, string messageBody, HttpStatusCode statusCode)
@@ -89,9 +88,8 @@ namespace NGDP.Network
             context.Response.OutputStream.Close();
         }
 
-        private static async void Process(HttpListenerContext context)
+        private static void Process(HttpListenerContext context)
         {
-
             var tokens = context.Request.Url.AbsolutePath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             if (tokens.Length == 0)
             {
@@ -130,7 +128,7 @@ namespace NGDP.Network
 
                     blte.Send($"/{buildInfo.ServerInfo.Path}/data/{archiveName.Substring(0, 2)}/{archiveName.Substring(2, 2)}/{archiveName}");
 
-                    Program.WriteLine($"[PROXY] Serving {fileName} through {blte.URL}.");
+                    Scanner.WriteLine($"[PROXY] Serving {fileName} through {blte.URL}.");
 
                     if (!blte.Failed)
                     {
@@ -159,36 +157,14 @@ namespace NGDP.Network
             }
             catch (IOException ioe)
             {
-                Program.WriteLine("[PROXY] Remote client closed the connection.");
+                Scanner.WriteLine("[PROXY] Remote client closed the connection.");
             }
             catch (Exception e)
             {
-                Program.WriteLine(e.ToString());
+                Scanner.WriteLine(e.ToString());
 
                 WriteError(context, e.ToString(), HttpStatusCode.InternalServerError);
             }
-        }
-
-        private void Initialize(int port)
-        {
-            Port = port;
-
-            _serverThread = new Thread(Listen);
-            _serverThread.Start();
-        }
-        
-        private static void Reply(HttpListenerContext context, string bdy)
-        {
-            context.Response.ContentType = "text/plain";
-            context.Response.ContentLength64 = bdy.Length;
-            context.Response.AddHeader("Connection", "close");
-                                
-            using (var writer = new StreamWriter(context.Response.OutputStream))
-                writer.Write(bdy);
-            context.Response.StatusCode = (int)HttpStatusCode.OK;
-            
-            context.Response.OutputStream.Flush();
-            context.Response.OutputStream.Close();
         }
     }
 }

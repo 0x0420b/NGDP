@@ -14,7 +14,7 @@ namespace NGDP.Commands
         public static void AddChannel(IrcClient client, IrcMessageData messageData)
         {
             var channelName = messageData.MessageArray[1];
-            if (Program.Channels.Any(c => c.ChannelName == channelName))
+            if (Scanner.Channels.Any(c => c.ChannelName == channelName))
                 return;
 
             var channel = new Channel
@@ -23,16 +23,16 @@ namespace NGDP.Commands
                 DisplayName = channelName,
             };
 
-            channel.MessageEvent += Program.OnMessageEvent;
+            channel.MessageEvent += Scanner.OnMessageEvent;
 
-            Program.Channels.Add(channel);
+            Scanner.Channels.Add(channel);
         }
 
         [CommandHandler("$forceupdate", "$forceupdate <channel name>")]
         public static void ForceChannelUpdate(IrcClient client, IrcMessageData messageData)
         {
             var channelName = messageData.MessageArray[1];
-            var channel = Program.Channels.FirstOrDefault(p => p.ChannelName == channelName);
+            var channel = Scanner.Channels.FirstOrDefault(p => p.ChannelName == channelName);
             if (channel == null)
                 client.SendReply(messageData, "Channel not known (add it first?)");
             else
@@ -42,13 +42,13 @@ namespace NGDP.Commands
         [CommandHandler("$subscribe", "")]
         public static void Subscrbe(IrcClient client, IrcMessageData messageData)
         {
-            Program.Subscribe(messageData.From, messageData.Channel);
+            Scanner.Subscribe(messageData.From, messageData.Channel);
         }
 
         [CommandHandler("$unsubscribe", "")]
         public static void Unsubscribe(IrcClient client, IrcMessageData messageData)
         {
-            Program.Unsubscribe(messageData.From);
+            Scanner.Unsubscribe(messageData.From);
         }
 
         [CommandHandler("$unload", "")]
@@ -67,13 +67,11 @@ namespace NGDP.Commands
                 return;
             }
 
-#if UNIX
-            if (!Program.HasProxy)
+            if (!Scanner.HasProxy)
             {
                 client.SendReply(messageData, "Command disabled.");
                 return;
             }
-#endif
 
             if (!RemoteBuildManager.IsBuildKnown(messageData.MessageArray[1]))
             {
@@ -95,7 +93,7 @@ namespace NGDP.Commands
                     // Disable resharper for readability
                     // ReSharper disable once UseStringInterpolation
                     var response = string.Format("http://{0}/{1}/{2}/{3}",
-                        Program.PUBLIC_DOMAIN,
+                        Scanner.Proxy.PublicDomain,
                         buildInfo.VersionName,
                         JenkinsHashing.Instance.ComputeHash(messageData.MessageArray[2]),
                         Path.GetFileName(messageData.MessageArray[2].Replace('\\', '/')));

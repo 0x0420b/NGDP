@@ -10,6 +10,8 @@ using NGDP.Network;
 using System.IO;
 using System.Xml.Serialization;
 using System.Linq;
+using System.Collections.Concurrent;
+using NGDP.Xml;
 #if !UNIX
 using Colorful;
 using Console = Colorful.Console;
@@ -17,114 +19,82 @@ using Console = Colorful.Console;
 
 namespace NGDP
 {
-    [Serializable, XmlRoot("configuration")]
-    public class Configuration
+    internal static class Scanner
     {
-        [Serializable]
-        public class ServerInfo
-        {
-            [XmlElement("address")]
-            public string Address     { get; set; }
-
-            [XmlElement("port")]
-            public int Port           { get; set; }
- 
-            [XmlElement("channel")]
-            public List<Channel> Channels { get; set; }
-            
-            [XmlElement("user")]
-            public string Username    { get; set; }
-        }
-
-        [Serializable]
-        public class Channel
-        {
-            [XmlElement("name")]
-            public string Name { get; set; }
-
-            [XmlElement("key")]
-            public string Key { get; set; }
-        }
-
-        [Serializable]
-        public class BranchInfo
-        {
-            [XmlElement("name")]
-            public string Name { get; set; }
-
-            [XmlElement("description")]
-            public string Description { get; set; }
-        }
+        /// <summary>
+        /// XML configuration, deserialized.
+        /// </summary>
+        public static Configuration Configuration { get; private set; }
         
-        [XmlElement("server")]
-        public List<ServerInfo> Servers { get; set; }
+        /// <summary>
+        /// List of irc servers we are connected to.
+        /// </summary>
+        private static Dictionary<string, IrcClient> _ircClients { get; } = new Dictionary<string, IrcClient>();
 
-        [XmlElement("branch")]
-        public List<BranchInfo> Branches { get; set; }
-    }
-    
-    internal static class Program
-    {
-        private static Configuration Configuration { get; set; }
-        
-        private static Dictionary<string, IrcClient> _clients { get; } = new Dictionary<string, IrcClient>();
+        /// <summary>
+        /// Counds the amount of open connections.
+        /// </summary>
         private static int _connectionCount = 0;
+        
+        /// <summary>
+        /// The list of currently controlled channels.
+        /// </summary>
         public static List<Channel> Channels { get; } = new List<Channel>();
-        public static List<BuildInfo> Builds { get; } = new List<BuildInfo>();
 
-        public static bool BinariesDownloadEnabled => false;
+        /// <summary>
+        /// Returns true if the HTTP proxy is enabled.
+        /// </summary>
+        public static bool HasProxy => Proxy != null;
 
-        public static bool HasProxy => _httpServer != null;
-        private static HttpServer _httpServer;
+        /// <summary>
+        /// The HTTP proxy itself.
+        /// </summary>
+        public static HttpServer Proxy { get; private set; }
 
-        private static CancellationTokenSource _token = new CancellationTokenSource();
+        private static CancellationTokenSource _token { get; } = new CancellationTokenSource();
+
         private static string[] _startupArguments;
 
+        /// <summary>
+        /// Users that want to get notified of an update.
+        /// </summary>
         private static Dictionary<string, List<string>> _subscribers = new Dictionary<string, List<string>>();
 
-        #if !UNIX
-        private static StyleSheet StyleSheet;
+        private static ConcurrentQueue<BuildInfo> _pendingUpdatesBuilds = new ConcurrentQueue<BuildInfo>();
+
+#if !UNIX
+        private static StyleSheet _styleSheet;
 #endif
 
-        public static Dictionary<string, string> FilesToDownload { get; } = new Dictionary<string, string>();
-        public static string PUBLIC_DOMAIN;
-
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
 #if !UNIX && !DEBUG
             if (args.Length == 0)
             {
                 Console.WriteLine("Arguments:");
                 Console.WriteLine("--conf, -c           Path the xml configuration file.");
-                Console.WriteLine("--autodownload, -a   List of files to autodownload.");
-                Console.WriteLine("--httpDomain, -d     Domain name where the bot can be reached.");
-                Console.WriteLine("--bindAddr, -b       Address to bind the HTTP server to (typically 0.0.0.0)");
-                Console.WriteLine("                     Implities --hasHttp");
-                Console.WriteLine("--bindPort, -p       Public port to bind the HTTP server on.");
-                Console.WriteLine("                     Implities --hasHttp");
-                Console.WriteLine("--hasHttp, -h        Control wether or not http as active. Overrides any other implicit setting.");
                 return;
             }
 #endif
 
 #if !UNIX
             // Setup console
-            StyleSheet = new StyleSheet(Color.White);
-            StyleSheet.AddStyle(@"\[[0-9\/]+] [0-9:]+\ ?[AP]?M?]", Color.LightSkyBlue);
-            StyleSheet.AddStyle(@"\[[A-Z]+\]", Color.Red);
-            StyleSheet.AddStyle(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)", Color.Purple);
-            StyleSheet.AddStyle(@" [0-9]+ ", Color.LightGreen);
-            StyleSheet.AddStyle(@"#[-az0-9_-]", Color.DarkGreen);
-            StyleSheet.AddStyle(@" [a-f0-9]{32}", Color.Orange);
+            _styleSheet = new StyleSheet(Color.White);
+            _styleSheet.AddStyle(@"\[[0-9\/]+] [0-9:]+\ ?[AP]?M?]", Color.SlateBlue);
+            _styleSheet.AddStyle(@"\[[A-Z]+\]", Color.Red);
+            _styleSheet.AddStyle(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)", Color.Purple);
+            _styleSheet.AddStyle(@"#[-az0-9_-]", Color.DarkGreen);
+            _styleSheet.AddStyle(@" [a-f0-9]{32}", Color.Orange);
 #endif
 
             _startupArguments = args;
 
             Console.CancelKeyPress += (s, ea) => {
-                Program.WriteLine("[ERROR] Aborting ...");
-                foreach (var knownServer in _clients)
+                Scanner.WriteLine("[ERROR] Aborting ...");
+                foreach (var knownServer in _ircClients)
                     knownServer.Value.Disconnect();
-                _httpServer?.Stop();
+
+                Proxy?.Stop();
 
                 _token.Cancel();
             };
@@ -145,50 +115,17 @@ namespace NGDP
                 Channels.Add(newChannel);
             }
 
-            // Read command line arguments
-            var autodownloadList = GetStringParam("--autoDownload", "-auto", null);
+            #region HTTP Proxy setup
+
+            if (Configuration.Proxy.Enabled)
+            {
+                WriteLine("[HTTP] Listening on http://{1}:{0}", Configuration.Proxy.PublicDomainName, Configuration.Proxy.BindPort);
+
+                Proxy = new HttpServer(Configuration.Proxy.Endpoint, Configuration.Proxy.PublicDomainName);
+                Proxy.Listen(Configuration.Proxy.BindPort, _token);
+            }
+            #endregion
             
-            PUBLIC_DOMAIN = GetStringParam("--httpDomain", "-d", "ngdp-warpten.c9users.io");
-            var bindAddr = GetStringParam("--bindAddr", "-a", "0.0.0.0");
-            var httpPort = GetIntParam("--bindPort", "-h", 8080);
-            
-            var hasHttp = Array.IndexOf(args, "--hasHttp") != -1;
-            if (!hasHttp)
-            {
-                hasHttp = Array.IndexOf(args, "--bindAddr") != -1;
-                if (!hasHttp)
-                    hasHttp = Array.IndexOf(args, "--bindPort") != -1;
-            }
-
-            if (!string.IsNullOrEmpty(autodownloadList))
-            {
-                using (var reader = new StreamReader(autodownloadList))
-                {
-                    string line = null;
-                    while ((line = reader.ReadLine()) != null)
-                    {
-                        if (line.Length == 0 || line[0] == '#')
-                            continue;
-
-                        var tokens = line.Split(new[] { " => " }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToArray();
-                        if (tokens.Length == 0)
-                            continue;
-                        
-                        FilesToDownload[tokens[0]] = tokens[1];
-                        // Auto-add PDBs on the off chance.
-                        if (tokens[0].Substring(tokens[0].Length - 4, 4) == ".exe")
-                            FilesToDownload[tokens[0].Replace(".exe", ".pdb")] = tokens[1];
-                    }
-                }
-            }
-
-            if (hasHttp)
-            {
-                WriteLine("[HTTP] Listening on http://{1}:{0}", httpPort, PUBLIC_DOMAIN);
-
-                Task.Factory.StartNew(() => { _httpServer = new HttpServer(httpPort); });
-            }
-
             // Setup IRC clients
             foreach (var serverInfo in Configuration.Servers)
             {
@@ -199,7 +136,7 @@ namespace NGDP
                     ActiveChannelSyncing = true
                 };
 
-                client.OnConnected += (sender, eventArgs) => StartRequestingUpdates();
+                client.OnConnected += (sender, eventArgs) => StartThreads();
                 
                 client.OnChannelMessage += (sender, eventArgs) => {
                     Dispatcher.Dispatch(eventArgs.Data, client);
@@ -217,7 +154,7 @@ namespace NGDP
 
                 Task.Run(() => { client.Listen(); });
                 
-                _clients[serverInfo.Address] = client;
+                _ircClients[serverInfo.Address] = client;
             }
 
             while (!_token.IsCancellationRequested)
@@ -236,7 +173,7 @@ namespace NGDP
             if (type != SendType.Message)
                 return;
             
-            foreach (var knownServer in _clients)
+            foreach (var knownServer in _ircClients)
             {
                 foreach (var channelName in knownServer.Value.JoinedChannels)
                 {
@@ -254,32 +191,42 @@ namespace NGDP
             }
         }
 
-        private static void StartRequestingUpdates()
+        public static void QueueInitialUpdate(BuildInfo build)
         {
-            WriteLine("[IRC] Connected.");
+            _pendingUpdatesBuilds.Enqueue(build);
+        }
+
+        private static void StartThreads()
+        {
             ++_connectionCount;
             if (_connectionCount != Configuration.Servers.Count)
                 return;
+            
+            WriteLine("[IRC] Connected.");
 
-            Task.Factory.StartNew(() =>
+            Task.Run(async () =>
             {
-                var silent = true;
-                
+                while (!_token.IsCancellationRequested)
+                {
+                    if (_pendingUpdatesBuilds.TryDequeue(out var currentBuildInfo))
+                        await currentBuildInfo.Prepare(true);
+
+                    _token.Token.WaitHandle.WaitOne(5000);
+                }
+
+            }, _token.Token).ConfigureAwait(false);
+
+            Task.Run(() =>
+            {
+                foreach (var channel in Channels)
+                    channel.Update(true); // Initial update is silent to avoid spamming IRC on connect.
+
                 while (!_token.IsCancellationRequested)
                 {
                     foreach (var channel in Channels)
-                    {
-                        channel.Update(silent);
-#if !UNIX && DEBUG
-                        break;
-#endif
-                    }
-                    silent = false;
+                        channel.Update(false);
 
-#if !UNIX && DEBUG
-                    break;
-#endif
-                    Thread.Sleep(30000);
+                    _token.Token.WaitHandle.WaitOne(30000);
                 }
             }, _token.Token).ConfigureAwait(false);
         }
@@ -299,23 +246,7 @@ namespace NGDP
 
             return _startupArguments[idx + 1];
         }
-
-        private static int GetIntParam(string argumentName, string shortName, int defaultValue)
-        {
-            var idx = Array.IndexOf(_startupArguments, argumentName);
-            if (idx == _startupArguments.Length - 1)
-                return defaultValue;
-
-            if (idx == -1)
-                idx = Array.IndexOf(_startupArguments, shortName);
-
-            // If not found or last argument
-            if (idx == -1 || idx == _startupArguments.Length - 1)
-                return defaultValue;
-
-            return int.Parse(_startupArguments[idx + 1]);
-        }
-
+        
         public static void WriteLine(string fmt, params object[] args)
         {
             var subfmt = $"[{DateTime.Now}] {fmt}";
@@ -323,7 +254,7 @@ namespace NGDP
 #if UNIX
             Console.WriteLine(subfmt, args);
 #else
-            Console.WriteLineStyled(StyleSheet, subfmt, args);
+            Console.WriteLineStyled(_styleSheet, subfmt, args);
 #endif
         }
 
