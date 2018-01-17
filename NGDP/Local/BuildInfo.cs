@@ -85,7 +85,7 @@ namespace NGDP.Local
             {
                 await Task.Run(() =>
                 {
-                    foreach (var kv in Scanner.Configuration.GetBranchInfo(VersionName).AutoDownloads)
+                    foreach (var kv in Scanner.Configuration.GetBranchInfo(Channel).AutoDownloads)
                     {
                         DownloadFile(kv.Value, kv.LocalName);
                         // If we see an exe, be horribly gullible and hope for a PDB
@@ -152,7 +152,7 @@ namespace NGDP.Local
             if (!string.Equals(localFileName, @"\") || string.IsNullOrEmpty(localFileName))
                 localFileName = Path.GetFileName(remoteFileName);
             
-            var completeFilePath = Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, localFileName);
+            var completeFilePath = Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, VersionName, localFileName);
             Directory.CreateDirectory(Path.GetDirectoryName(completeFilePath));
 
             if (File.Exists(completeFilePath))
