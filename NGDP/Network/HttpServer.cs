@@ -96,7 +96,7 @@ namespace NGDP.Network
                 WriteError(context, "Badly formatted request.", HttpStatusCode.BadRequest);
                 return;
             }
-            
+
             var buildName = tokens[0];
             var fileHash = ulong.Parse(tokens[1]);
             var fileName = tokens[2];

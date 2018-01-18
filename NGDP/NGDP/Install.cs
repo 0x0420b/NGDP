@@ -76,7 +76,7 @@ namespace NGDP.NGDP
 
         public bool HasFile(string fileName) =>
             Records.Any(r => r.NameHash == JenkinsHashing.Instance.ComputeHash(fileName));
-            
+
         public bool HasFile(ulong fileHash) =>
             Records.Any(r => r.NameHash == fileHash);
     }

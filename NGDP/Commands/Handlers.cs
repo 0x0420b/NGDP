@@ -152,7 +152,7 @@ namespace NGDP.Commands
             {
                 // Save memory by unloading old data.
                 RemoteBuildManager.ClearExpiredBuilds();
-                
+
                 failHandler(buildInfo);
                 buildInfo.OnReady += onReady;
                 if (!buildInfo.Loading)

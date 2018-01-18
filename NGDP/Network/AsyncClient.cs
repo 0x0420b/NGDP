@@ -13,14 +13,14 @@ namespace NGDP.Network
         public NonClosingStreamWrapper Stream { get; private set; }
         private string _host;
         private int _port;
-        
+
         public int StatusCode { get; private set; }
         public int ContentLength => int.Parse(ResponseHeaders.Get("Content-Length"));
         public WebHeaderCollection RequestHeaders { get; } = new WebHeaderCollection();
         public WebHeaderCollection ResponseHeaders { get; } = new WebHeaderCollection();
 
         public bool Failed => StatusCode == 404;
-        
+
         public string URL { get; private set; }
 
         public AsyncClient(string host, int port = 80)
@@ -36,8 +36,8 @@ namespace NGDP.Network
                 ReceiveTimeout = 5000,
                 NoDelay = true
             };
-            
-            
+
+
             URL = $"http://{_host}{queryString}";
 
             var headerString = new StringBuilder();

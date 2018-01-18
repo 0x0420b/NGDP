@@ -42,7 +42,6 @@ namespace NGDP.Local
             Directory.CreateDirectory(Path.GetDirectoryName(skipFilePath));
             File.Create(skipFilePath);
 
-
             Loading = true;
 
             await Task.Run(() =>
@@ -60,7 +59,7 @@ namespace NGDP.Local
 
                 Scanner.WriteLine($"[{VersionName}] Downloading root {rootEncodingEntry.Key.ToHexString()} ...");
                 Root.FromStream(ServerInfo.Hosts[0], $"/{ServerInfo.Path}/data/{rootEncodingEntry.Key[0]:x2}/{rootEncodingEntry.Key[1]:x2}/{rootEncodingEntry.Key.ToHexString()}");
-                Scanner.WriteLine($"[{VersionName}] Root downloaded.");
+                Scanner.WriteLine($"[{VersionName}] Root downloaded ({Root.Count} entries).");
 
                 Scanner.WriteLine($"[{VersionName}] Downloading {ContentConfiguration.Archives.Length} indices ...");
                 Indices.FromStream(ServerInfo.Hosts[0], ContentConfiguration.Archives);
@@ -72,8 +71,7 @@ namespace NGDP.Local
                         $"/{path}/data/{hash[0]:x2}/{hash[1]:x2}/{hash.ToHexString()}");
 
                     if (Install.Loaded)
-                        Scanner.WriteLine($"[CASC] iInstall file loaded ({hash.ToHexString()}, {Install.Count} entries).");
-
+                        Scanner.WriteLine($"[{VersionName}] Install file loaded ({hash.ToHexString()}, {Install.Count} entries).");
                 }
 
                 InstallLoader(ServerInfo.Hosts[0], ServerInfo.Path, BuildConfiguration.Install[1]);
@@ -174,7 +172,7 @@ namespace NGDP.Local
 
             if (string.IsNullOrEmpty(localFileName))
                 return;
-            
+
             var completeFilePath = Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, VersionName, localFileName);
             var fileDirectory = Path.GetDirectoryName(completeFilePath);
             if (string.IsNullOrEmpty(fileDirectory))
@@ -185,7 +183,7 @@ namespace NGDP.Local
 
             if (File.Exists(completeFilePath))
                 return;
-            
+
             var fileEntry = GetEntry(remoteFileName);
             if (fileEntry == null)
                 return;

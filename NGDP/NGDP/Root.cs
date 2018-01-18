@@ -28,7 +28,7 @@ namespace NGDP.NGDP
                     while (fileReader.BaseStream.Position < fileReader.BaseStream.Length)
                     {
                         var recordCount = fileReader.ReadInt32();
-                        
+
                         fileReader.BaseStream.Seek(4 + 4, SeekOrigin.Current); // Skip flags
                         // var contentFlags = fileReader.ReadInt32();
                         // var localeFlags = fileReader.ReadInt32();
@@ -42,7 +42,7 @@ namespace NGDP.NGDP
                             records[i] = new Record();
                             // records[i].LocaleFlags = localeFlags;
                             // records[i].ContentFlags = contentFlags;
-                            
+
                             // records[i].FileDataID = fileDataIndex + fileReader.ReadInt32();
                             // fileDataIndex = records[i].FileDataID + 1;
                         }

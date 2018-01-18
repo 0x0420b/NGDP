@@ -25,7 +25,7 @@ namespace NGDP
         /// XML configuration, deserialized.
         /// </summary>
         public static Configuration Configuration { get; private set; }
-        
+
         /// <summary>
         /// List of irc servers we are connected to.
         /// </summary>
@@ -35,7 +35,7 @@ namespace NGDP
         /// Counds the amount of open connections.
         /// </summary>
         private static int _connectionCount = 0;
-        
+
         /// <summary>
         /// The list of currently controlled channels.
         /// </summary>
@@ -74,7 +74,7 @@ namespace NGDP
             _styleSheet.AddStyle(@"\[[A-Z]+\]", Color.Gold);
             _styleSheet.AddStyle(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)", Color.Purple);
             _styleSheet.AddStyle(@"#[-az0-9_-]", Color.DarkGreen);
-            _styleSheet.AddStyle(@" [a-f0-9]{32}", Color.Orange);
+            _styleSheet.AddStyle(@"[a-f0-9]{32}", Color.Orange);
             _styleSheet.AddStyle(@"[a-z_-]+\-[0-9]{5}patch[0-9]\.[0-9]\.[0-9]_[A-Za-z]+", Color.Firebrick);
 #endif
 
@@ -116,7 +116,7 @@ namespace NGDP
                 Proxy.Listen(Configuration.Proxy.BindPort, _token);
             }
             #endregion
-            
+
             // Setup IRC clients
             foreach (var serverInfo in Configuration.Servers)
             {
@@ -128,7 +128,7 @@ namespace NGDP
                 };
 
                 client.OnConnected += (sender, eventArgs) => StartThreads();
-                
+
                 client.OnChannelMessage += (sender, eventArgs) => {
                     Dispatcher.Dispatch(eventArgs.Data, client);
                 };
@@ -144,7 +144,7 @@ namespace NGDP
                 }
 
                 Task.Run(() => { client.Listen(); });
-                
+
                 _ircClients[serverInfo.Address] = client;
             }
 
@@ -163,7 +163,7 @@ namespace NGDP
         {
             foreach (var knownServerPair in _ircClients)
             {
-                var serverInfo = Scanner.Configuration.GetServerInfo(knownServerPair.Key);
+                var serverInfo = Configuration.GetServerInfo(knownServerPair.Key);
                 if (serverInfo == null)
                     continue;
 
@@ -181,7 +181,7 @@ namespace NGDP
                     if (distinctSubscribers.Length == 0)
                         continue;
 
-                    knownServerPair.Value.SendMessage(SendType.Message, channelName, $"{string.Join(", ", distinctSubscribers)}: Ping! Build {buildName} deployed!");
+                    knownServerPair.Value.SendMessage(SendType.Message, channelName, $"{string.Join(", ", distinctSubscribers)}: Wakey-wakey! Build {buildName} deployed!");
                 }
             }
         }
@@ -196,7 +196,7 @@ namespace NGDP
             ++_connectionCount;
             if (_connectionCount != Configuration.Servers.Count)
                 return;
-            
+
             WriteLine("[IRC] Connected.");
 
             Task.Run(async () =>
@@ -241,7 +241,7 @@ namespace NGDP
 
             return _startupArguments[idx + 1];
         }
-        
+
         public static void WriteLine(string fmt, params object[] args)
         {
             var subfmt = $"[{DateTime.Now}] {fmt}";
