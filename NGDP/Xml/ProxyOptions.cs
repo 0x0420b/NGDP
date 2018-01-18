@@ -19,5 +19,7 @@ namespace NGDP.Xml
         public string MirrorRoot { get; set; } = "./";
 
         public bool Enabled => !string.IsNullOrEmpty(PublicDomainName);
+
+        public override string ToString() => $"{Endpoint}:{BindPort}";
     }
 }

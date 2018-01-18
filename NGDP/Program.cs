@@ -84,7 +84,7 @@ namespace NGDP
             _startupArguments = args;
 
             Console.CancelKeyPress += (s, ea) => {
-                Scanner.WriteLine("[ERROR] Aborting ...");
+                WriteLine("[ERROR] Aborting ...");
                 foreach (var knownServer in _ircClients)
                     knownServer.Value.Disconnect();
 

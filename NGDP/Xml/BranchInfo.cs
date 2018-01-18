@@ -15,5 +15,7 @@ namespace NGDP.Xml
 
         [XmlElement("auto-download")]
         public List<AutoDownloadInfo> AutoDownloads { get; set; }
+
+        public override string ToString() => Name;
     }
 }

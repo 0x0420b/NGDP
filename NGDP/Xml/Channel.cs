@@ -11,5 +11,7 @@ namespace NGDP.Xml
 
         [XmlText]
         public string Name { get; set; }
+
+        public override string ToString() => $"{Name}#{Key}";
     }
 }

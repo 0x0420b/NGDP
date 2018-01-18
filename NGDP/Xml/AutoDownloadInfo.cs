@@ -11,5 +11,7 @@ namespace NGDP.Xml
 
         [XmlText]
         public string Value { get; set; }
+
+        public override string ToString() => $"Local: {LocalName} Remote: {Value}";
     }
 }

@@ -88,9 +88,15 @@ namespace NGDP.Local
                     foreach (var kv in Scanner.Configuration.GetBranchInfo(Channel).AutoDownloads)
                     {
                         DownloadFile(kv.Value, kv.LocalName);
+
                         // If we see an exe, be horribly gullible and hope for a PDB
                         if (kv.Value.Contains(".exe"))
-                            DownloadFile(kv.Value.Replace(".exe", ".pdb"), kv.LocalName.Replace(".exe", ".pdb"));
+                        {
+                            var remotePdbName = kv.Value.Replace(".exe", ".pdb");
+                            var localPdbName = kv.LocalName?.Replace(".exe", ".pdb");
+
+                            DownloadFile(remotePdbName, localPdbName);
+                        }
                     }
 
                     // Immediately free

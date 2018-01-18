@@ -18,5 +18,7 @@ namespace NGDP.Xml
             
         [XmlElement("user")]
         public string Username    { get; set; }
+
+        public override string ToString() => $"{Username}@{Address}:{Port}";
     }
 }
