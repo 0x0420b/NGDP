@@ -132,7 +132,7 @@ namespace NGDP
                 client.OnChannelMessage += (sender, eventArgs) => {
                     Dispatcher.Dispatch(eventArgs.Data, client);
                 };
-                
+
                 client.Connect(serverInfo.Address, serverInfo.Port);
                 client.Login(serverInfo.Username, serverInfo.Username, 0, serverInfo.Username);
                 foreach (var channelInfo in serverInfo.Channels)

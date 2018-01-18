@@ -22,6 +22,10 @@ namespace NGDP.Xml
 
         public override string ToString() => $"{Username}@{Address}:{Port}";
 
-        public ChannelInfo GetChannel(string channelName) => Channels.FirstOrDefault(c => c.Name == channelName);
+        public ChannelInfo GetChannel(string channelName)
+        {
+            var fixedName = channelName[0] == '#' ? channelName.Substring(1) : channelName;
+            return Channels.FirstOrDefault(c => c.Name == fixedName);
+        }
     }
 }
