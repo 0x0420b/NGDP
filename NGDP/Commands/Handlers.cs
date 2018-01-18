@@ -71,7 +71,8 @@ namespace NGDP.Commands
         public static void Unload(IrcClient client, IrcMessageData messageData)
         {
             var buildInfo = RemoteBuildManager.GetBuild(messageData.MessageArray[1]);
-            buildInfo.Unload();
+            if (buildInfo != null)
+                buildInfo.Unload();
         }
 
         [CommandHandler(".downloadfile", "<build name string> <filePath>", 2)]
