@@ -118,11 +118,8 @@ namespace NGDP.Commands
                     if (!buildInfo.Install.Loaded)
                         client.SendReply(messageData, $"{messageData.Nick}: Install file could not be downloaded, expect erroneous results.");
 
-                    Task.Delay(10 * 60 * 1000).ContinueWith(t =>
-                    {
-                        buildInfo.Unload();
-
-                        client.SendReply(messageData, $"Data from build {buildInfo.VersionName} has been unloaded.");
+                    Task.Delay(10 * 60 * 1000).ContinueWith(t => {
+                        buildInfo.Expired = true;
                     });
                 });
         }

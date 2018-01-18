@@ -28,6 +28,8 @@ namespace NGDP.Local
 
         public bool Ready => Encoding.Count != 0 && Root.Count != 0;
 
+        public bool Expired { get; set; } = false;
+
         public async Task Prepare(bool downloadFiles = false)
         {
             if (File.Exists(Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, VersionName, ".skip")))
@@ -78,7 +80,6 @@ namespace NGDP.Local
                     Scanner.WriteLine($"[{VersionName}] Install downloaded ({Install.Count} entries).");
             }).ConfigureAwait(false);
 
-            Loading = false;
             OnReady?.Invoke();
 
             if (downloadFiles && Install.Loaded)
@@ -99,21 +100,26 @@ namespace NGDP.Local
                         }
                     }
 
-                    // Immediately free
-                    Unload();
+                    // Mark for collection
+                    Expired = true;
                 });
             }
+
+            Loading = false;
         }
 
         public void Unload()
         {
             // Don't empty if loading
-            if (Loading)
+            if (Loading || !Expired)
                 return;
 
             Encoding.Clear();
             Root.Clear();
             Indices.Clear();
+
+            Expired = false;
+            Loading = false;
 
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GC.Collect(2, GCCollectionMode.Forced);
