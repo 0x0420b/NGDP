@@ -23,25 +23,7 @@ namespace NGDP.Commands
                 DisplayName = channelName,
             };
 
-            channel.MessageEvent += Scanner.OnMessageEvent;
-
-            Scanner.Channels.Add(channel);
-        }
-
-        [CommandHandler(".leave", 0)]
-        public static void LeaveChannel(IrcClient client, IrcMessageData messageData)
-        {
-            var channelName = messageData.Channel;
-            if (Scanner.Channels.Any(c => c.ChannelName == channelName))
-                return;
-
-            var channel = new Channel
-            {
-                ChannelName = channelName,
-                DisplayName = channelName,
-            };
-
-            channel.MessageEvent += Scanner.OnMessageEvent;
+            channel.BuildDeployed += Scanner.OnBuildDeployed;
 
             Scanner.Channels.Add(channel);
         }
@@ -57,16 +39,28 @@ namespace NGDP.Commands
                 channel.Update(false);
         }
 
-        [CommandHandler(".subscribe", 0)]
+        [CommandHandler(".notify", "<branch_name>", 1)]
         public static void Subscrbe(IrcClient client, IrcMessageData messageData)
         {
-            Scanner.Subscribe(messageData.From, messageData.Channel);
+            var serverInfo = Scanner.Configuration.GetServerInfo(client.Address);
+            var channelInfo = serverInfo?.GetChannel(messageData.Channel);
+            if (channelInfo == null)
+                return;
+
+            var branchName = messageData.MessageArray[1];
+            channelInfo.RegisterListener(messageData.Nick, branchName);
         }
 
-        [CommandHandler(".unsubscribe", 0)]
+        [CommandHandler(".unnotify", "<branch_name>", 1)]
         public static void Unsubscribe(IrcClient client, IrcMessageData messageData)
         {
-            Scanner.Unsubscribe(messageData.From);
+            var serverInfo = Scanner.Configuration.GetServerInfo(client.Address);
+            var channelInfo = serverInfo?.GetChannel(messageData.Channel);
+            if (channelInfo == null)
+                return;
+
+            var branchName = messageData.MessageArray[1];
+            channelInfo.UnregisterListener(messageData.Nick, branchName);
         }
 
         [CommandHandler(".unload", 0)]

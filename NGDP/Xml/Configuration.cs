@@ -19,5 +19,7 @@ namespace NGDP.Xml
 
         public BranchInfo GetBranchInfo(string channelName)
             => Branches.FirstOrDefault(b => b.Name == channelName);
+
+        public ServerInfo GetServerInfo(string address) => Servers.FirstOrDefault(s => s.Address == address);
     }
 }

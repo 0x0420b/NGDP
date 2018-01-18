@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Serialization;
 
 namespace NGDP.Xml
@@ -14,11 +15,13 @@ namespace NGDP.Xml
         public int Port           { get; set; }
  
         [XmlElement("channel")]
-        public List<Channel> Channels { get; set; }
+        public List<ChannelInfo> Channels { get; set; }
             
         [XmlElement("user")]
         public string Username    { get; set; }
 
         public override string ToString() => $"{Username}@{Address}:{Port}";
+
+        public ChannelInfo GetChannel(string channelName) => Channels.FirstOrDefault(c => c.Name == channelName);
     }
 }

@@ -12,7 +12,7 @@ namespace NGDP
         public string ChannelName { get; set; }
         public string DisplayName { get; set; }
 
-        public event Action<SendType, string> MessageEvent;
+        public event Action<string, string> BuildDeployed;
 
         public void Update(bool silent)
         {
@@ -40,7 +40,7 @@ namespace NGDP
                 RemoteBuildManager.AddBuild(buildInfo);
 
                 if (!silent)
-                    MessageEvent?.Invoke(SendType.Message, $"Build {versionName} deployed.");
+                    BuildDeployed?.Invoke(ChannelName, versionName);
 
                 Scanner.WriteLine($"[{versionName}] deployed to {versionInfo.Value.Region}");
 
@@ -50,8 +50,7 @@ namespace NGDP
 
                 if (buildInfo.BuildConfiguration.Encoding == null || buildInfo.ContentConfiguration.Archives == null)
                 {
-                    if (!silent)
-                        MessageEvent?.Invoke(SendType.Message, $"Error retrieving either CDN or build configuration file for {versionName}.");
+                    Scanner.WriteLine($"[Channel {ChannelName}] Error retrieving either CDN or build configuration file for {versionName}.");
                 }
                 else
                     Scanner.QueueInitialUpdate(buildInfo);

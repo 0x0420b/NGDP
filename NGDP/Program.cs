@@ -10,6 +10,7 @@ using NGDP.Network;
 using System.IO;
 using System.Xml.Serialization;
 using System.Collections.Concurrent;
+using System.Linq;
 using NGDP.Xml;
 #if !UNIX
 using Colorful;
@@ -48,11 +49,6 @@ namespace NGDP
         private static CancellationTokenSource _token { get; } = new CancellationTokenSource();
 
         private static string[] _startupArguments;
-
-        /// <summary>
-        /// Users that want to get notified of an update.
-        /// </summary>
-        private static Dictionary<string, List<string>> _subscribers = new Dictionary<string, List<string>>();
 
         private static ConcurrentQueue<BuildInfo> _pendingUpdatesBuilds = new ConcurrentQueue<BuildInfo>();
 
@@ -105,7 +101,7 @@ namespace NGDP
             foreach (var channelInfo in Configuration.Branches)
             {
                 var newChannel = new Channel() {ChannelName = channelInfo.Name, DisplayName = channelInfo.Description};
-                newChannel.MessageEvent += OnMessageEvent;
+                newChannel.BuildDeployed += OnBuildDeployed;
 
                 Channels.Add(newChannel);
             }
@@ -163,25 +159,29 @@ namespace NGDP
             RemoteBuildManager.ClearExpiredBuilds();
         }
 
-        public static void OnMessageEvent(SendType type, string message)
+        public static void OnBuildDeployed(string branchName, string buildName)
         {
-            if (type != SendType.Message)
-                return;
-            
-            foreach (var knownServer in _ircClients)
+            foreach (var knownServerPair in _ircClients)
             {
-                foreach (var channelName in knownServer.Value.JoinedChannels)
+                var serverInfo = Scanner.Configuration.GetServerInfo(knownServerPair.Key);
+                if (serverInfo == null)
+                    continue;
+
+                foreach (var channelName in knownServerPair.Value.JoinedChannels)
                 {
-                    knownServer.Value.SendMessage(type, channelName, message);
+                    var channelInfo = serverInfo.GetChannel(channelName);
+                    if (channelInfo == null)
+                        continue;
 
-                    var usersToPoke = new HashSet<string>();
+                    var shouldWarnEveryone = channelInfo.Filters.Any(f => f == branchName);
+                    if (shouldWarnEveryone)
+                        knownServerPair.Value.SendMessage(SendType.Message, channelName, $"Build {buildName} deployed on branch {branchName}.");
 
-                    foreach (var sub in _subscribers)
-                        if (sub.Value.Contains(channelName))
-                            usersToPoke.Add(sub.Key);
+                    var distinctSubscribers = channelInfo.GetSubscribers(branchName).ToArray();
+                    if (distinctSubscribers.Length == 0)
+                        continue;
 
-                    if (usersToPoke.Count != 0)
-                        knownServer.Value.SendMessage(type, channelName, $"{string.Join(", ", usersToPoke)}: Ping!");
+                    knownServerPair.Value.SendMessage(SendType.Message, channelName, $"{string.Join(", ", distinctSubscribers)}: Ping! Build {buildName} deployed!");
                 }
             }
         }
@@ -251,19 +251,6 @@ namespace NGDP
 #else
             Console.WriteLineStyled(_styleSheet, subfmt, args);
 #endif
-        }
-
-        public static void Subscribe(string userName, string channel)
-        {
-            if (!_subscribers.TryGetValue(userName, out var s))
-                _subscribers[userName] = s = new List<string>();
-
-            s.Add(channel);
-        }
-
-        public static void Unsubscribe(string userName)
-        {
-            _subscribers.Remove(userName);
         }
     }
 }

@@ -5,7 +5,7 @@
     <address>irc.rizon.net</address>
     <port>6660</port>
 
-    <channel key="12345">your-channel-name</channel>
+    <channel key="12345" listen-for="wow wowt wow_beta wowdev">your-channel-name</channel>
   </server>
 
   <proxy>

@@ -82,7 +82,7 @@
     <Compile Include="Commands\Handlers.cs" />
     <Compile Include="Xml\AutoDownloadInfo.cs" />
     <Compile Include="Xml\BranchInfo.cs" />
-    <Compile Include="Xml\Channel.cs" />
+    <Compile Include="Xml\ChannelInfo.cs" />
     <Compile Include="Xml\Configuration.cs" />
     <Compile Include="Local\BuildInfo.cs" />
     <Compile Include="Local\RemoteBuildManager.cs" />
