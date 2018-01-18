@@ -13,7 +13,6 @@ namespace NGDP.Patch
         {
             using (var asyncClient = new AsyncClient("us.patch.battle.net", 1119))
             {
-                asyncClient.LogRequest = false;
                 asyncClient.Send($"/{channel}/cdns");
 
                 using (var reader = new StreamReader(asyncClient.Stream))

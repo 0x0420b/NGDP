@@ -19,8 +19,6 @@ namespace NGDP.Network
         public WebHeaderCollection RequestHeaders { get; } = new WebHeaderCollection();
         public WebHeaderCollection ResponseHeaders { get; } = new WebHeaderCollection();
 
-        public bool LogRequest { get; set; } = true;
-
         public bool Failed => StatusCode == 404;
         
         public string URL { get; private set; }
@@ -63,13 +61,6 @@ namespace NGDP.Network
                 else if (line.IndexOf("HTTP/", StringComparison.Ordinal) == 0)
                     StatusCode = int.Parse(line.Substring(9, 3));
             }
-            
-            if (!LogRequest)
-                return;
-        
-            Scanner.WriteLine("[HTTP] Requesting http://{0}{1} (Status code {2})", _host, queryString, StatusCode);
-            // foreach (var responseHeader in ResponseHeaders.AllKeys)
-            //     Scanner.WriteLine("[HTTP] {0}: {1}", responseHeader, ResponseHeaders[responseHeader]);
         }
 
         #region IDisposable Support

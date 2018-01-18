@@ -10,8 +10,8 @@ namespace NGDP.Commands
 {
     public static class Handlers
     {
-        [CommandHandler("$add", "$add <channel name>")]
-        public static void AddChannel(IrcClient client, IrcMessageData messageData)
+        [CommandHandler(".register", ".listen <channel name>", 1)]
+        public static void JoinChannel(IrcClient client, IrcMessageData messageData)
         {
             var channelName = messageData.MessageArray[1];
             if (Scanner.Channels.Any(c => c.ChannelName == channelName))
@@ -28,45 +28,57 @@ namespace NGDP.Commands
             Scanner.Channels.Add(channel);
         }
 
-        [CommandHandler("$forceupdate", "$forceupdate <channel name>")]
+        [CommandHandler(".leave", 0)]
+        public static void LeaveChannel(IrcClient client, IrcMessageData messageData)
+        {
+            var channelName = messageData.Channel;
+            if (Scanner.Channels.Any(c => c.ChannelName == channelName))
+                return;
+
+            var channel = new Channel
+            {
+                ChannelName = channelName,
+                DisplayName = channelName,
+            };
+
+            channel.MessageEvent += Scanner.OnMessageEvent;
+
+            Scanner.Channels.Add(channel);
+        }
+
+        [CommandHandler(".forceupdate", ".forceupdate <branch_name>", 1)]
         public static void ForceChannelUpdate(IrcClient client, IrcMessageData messageData)
         {
             var channelName = messageData.MessageArray[1];
             var channel = Scanner.Channels.FirstOrDefault(p => p.ChannelName == channelName);
             if (channel == null)
-                client.SendReply(messageData, "Channel not known (add it first?)");
+                client.SendReply(messageData, "Unknown branch (try adding it first?)");
             else
                 channel.Update(false);
         }
 
-        [CommandHandler("$subscribe", "")]
+        [CommandHandler(".subscribe", 0)]
         public static void Subscrbe(IrcClient client, IrcMessageData messageData)
         {
             Scanner.Subscribe(messageData.From, messageData.Channel);
         }
 
-        [CommandHandler("$unsubscribe", "")]
+        [CommandHandler(".unsubscribe", 0)]
         public static void Unsubscribe(IrcClient client, IrcMessageData messageData)
         {
             Scanner.Unsubscribe(messageData.From);
         }
 
-        [CommandHandler("$unload", "")]
+        [CommandHandler(".unload", 0)]
         public static void Unload(IrcClient client, IrcMessageData messageData)
         {
             var buildInfo = RemoteBuildManager.GetBuild(messageData.MessageArray[1]);
             buildInfo.Unload();
         }
 
-        [CommandHandler("$downloadfile", "$downloadfile <build name string> <filePath>")]
+        [CommandHandler(".downloadfile", ".downloadfile <build name string> <filePath>", -1)]
         public static void HandleDownloadFile(IrcClient client, IrcMessageData messageData)
         {
-            if (messageData.MessageArray.Length != 3)
-            {
-                client.SendReply(messageData, Dispatcher.GetUsage(messageData));
-                return;
-            }
-
             if (!Scanner.Configuration.Proxy.Enabled)
             {
                 client.SendReply(messageData, "Command disabled.");
@@ -82,7 +94,9 @@ namespace NGDP.Commands
             CheckFileExists(messageData.MessageArray[1],
                 buildInfo =>
                 {
-                    var indexEntry = buildInfo.GetEntry(messageData.MessageArray[2]);
+                    var remoteFileName = string.Join(" ", messageData.MessageArray.Skip(2));
+
+                    var indexEntry = buildInfo.GetEntry(remoteFileName);
                     if (indexEntry == null)
                     {
                         client.SendReply(messageData, $"{messageData.Nick}: File does not exist.");
@@ -96,7 +110,7 @@ namespace NGDP.Commands
                         Scanner.Proxy.PublicDomain,
                         buildInfo.VersionName,
                         JenkinsHashing.Instance.ComputeHash(messageData.MessageArray[2]),
-                        Path.GetFileName(messageData.MessageArray[2].Replace('\\', '/')));
+                        Path.GetFileName(remoteFileName.Replace('\\', '/')));
 
                     client.SendReply(messageData,
                         $"{messageData.Nick}: {response}");
@@ -124,7 +138,7 @@ namespace NGDP.Commands
                 });
         }
 
-        [CommandHandler("$listbuilds", "")]
+        [CommandHandler(".listbuilds", 0)]
         public static void HandleListBuilds(IrcClient client, IrcMessageData messageData)
         {
             foreach (var kv in RemoteBuildManager.Builds)

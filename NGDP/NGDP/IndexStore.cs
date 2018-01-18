@@ -29,7 +29,6 @@ namespace NGDP.NGDP
             {
                 using (var client = new AsyncClient(host))
                 {
-                    client.LogRequest = false;
                     client.Send($"/tpr/wow/data/{archiveHash[0]:x2}/{archiveHash[1]:x2}/{archiveHash.ToHexString()}.index");
 
                     if (client.Failed)

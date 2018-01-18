@@ -74,11 +74,12 @@ namespace NGDP
 #if !UNIX
             // Setup console
             _styleSheet = new StyleSheet(Color.White);
-            _styleSheet.AddStyle(@"\[[0-9\/]+] [0-9:]+\ ?[AP]?M?]", Color.SlateBlue);
-            _styleSheet.AddStyle(@"\[[A-Z]+\]", Color.Red);
+            _styleSheet.AddStyle(@"[0-9\/]+ [0-9:]+ (?:A|P)M", Color.SlateBlue);
+            _styleSheet.AddStyle(@"\[[A-Z]+\]", Color.Gold);
             _styleSheet.AddStyle(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)", Color.Purple);
             _styleSheet.AddStyle(@"#[-az0-9_-]", Color.DarkGreen);
             _styleSheet.AddStyle(@" [a-f0-9]{32}", Color.Orange);
+            _styleSheet.AddStyle(@"[a-z_-]+\-[0-9]{5}patch[0-9]\.[0-9]\.[0-9]_[A-Za-z]+", Color.Firebrick);
 #endif
 
             _startupArguments = args;

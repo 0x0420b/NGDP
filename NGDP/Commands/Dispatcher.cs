@@ -26,17 +26,15 @@ namespace NGDP.Commands
 
         public static void Dispatch(IrcMessageData data, IrcClient client)
         {
-            CommandHandler handler;
-            if (_handlers.TryGetValue(data.MessageArray[0], out handler))
-                handler(client, data);
-        }
+            if (!_handlers.TryGetValue(data.MessageArray[0], out var handler))
+                return;
+            if (!_attrs.TryGetValue(data.MessageArray[0], out var commandAttributes))
+                return;
 
-        public static string GetUsage(IrcMessageData data)
-        {
-            CommandHandlerAttribute rep;
-            if (_attrs.TryGetValue(data.MessageArray[0], out rep))
-                return rep.Usage;
-            return string.Empty;
+            if (commandAttributes.ExpectedArgumentCount != data.MessageArray.Length - 1)
+                client.SendReply(data, $"{data.Nick}: Invalid argument count. Expected usage: {commandAttributes.Command} {commandAttributes.Usage}");
+            else
+                handler(client, data);
         }
     }
 }

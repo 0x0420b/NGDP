@@ -42,6 +42,8 @@ namespace NGDP
                 if (!silent)
                     MessageEvent?.Invoke(SendType.Message, $"Build {versionName} deployed.");
 
+                Scanner.WriteLine($"[{versionName}] deployed to {versionInfo.Value.Region}");
+
                 // Get build info
                 buildInfo.BuildConfiguration = new BuildConfiguration(serverInfo, versionInfo.Value.BuildConfig);
                 buildInfo.ContentConfiguration = new ContentConfiguration(serverInfo, versionInfo.Value.CDNConfig);

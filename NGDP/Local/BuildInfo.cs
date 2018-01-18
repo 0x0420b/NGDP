@@ -48,11 +48,13 @@ namespace NGDP.Local
                 Scanner.WriteLine($"[{VersionName}] Encoding downloaded ({Encoding.Count} entries).");
 
                 if (!Encoding.TryGetValue(BuildConfiguration.Root, out var rootEncodingEntry))
+                {
+                    Scanner.WriteLine($"[{VersionName}] Unable to find root file {BuildConfiguration.Root.ToHexString()} ...");
                     return;
+                }
 
                 Scanner.WriteLine($"[{VersionName}] Downloading root {rootEncodingEntry.Key.ToHexString()} ...");
-                Root.FromStream(ServerInfo.Hosts[0],
-                    $"/{ServerInfo.Path}/data/{rootEncodingEntry.Key[0]:x2}/{rootEncodingEntry.Key[1]:x2}/{rootEncodingEntry.Key.ToHexString()}");
+                Root.FromStream(ServerInfo.Hosts[0], $"/{ServerInfo.Path}/data/{rootEncodingEntry.Key[0]:x2}/{rootEncodingEntry.Key[1]:x2}/{rootEncodingEntry.Key.ToHexString()}");
                 Scanner.WriteLine($"[{VersionName}] Root downloaded.");
 
                 Scanner.WriteLine($"[{VersionName}] Downloading {ContentConfiguration.Archives.Length} indices ...");
