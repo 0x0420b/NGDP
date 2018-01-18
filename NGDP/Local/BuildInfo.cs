@@ -32,11 +32,16 @@ namespace NGDP.Local
 
         public async Task Prepare(bool downloadFiles = false)
         {
-            if (File.Exists(Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, VersionName, ".skip")))
+            var skipFilePath = Path.Combine(Scanner.Configuration.Proxy.MirrorRoot, VersionName, ".skip");
+            if (downloadFiles && File.Exists(skipFilePath))
                 return;
 
             if (Loading)
                 return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(skipFilePath));
+            File.Create(skipFilePath);
+
 
             Loading = true;
 
@@ -163,8 +168,8 @@ namespace NGDP.Local
 
         public void DownloadFile(string remoteFileName, string localFileName)
         {
-            if (!string.Equals(localFileName, @"\") || string.IsNullOrEmpty(localFileName))
-                localFileName = Path.GetFileName(remoteFileName);
+            if (string.IsNullOrEmpty(localFileName))
+                localFileName = Path.GetFileName(remoteFileName.Replace("\\", "/"));
 
             if (string.IsNullOrEmpty(localFileName))
                 return;
