@@ -154,7 +154,7 @@ namespace NGDP
 
             while (!_token.IsCancellationRequested)
             {
-                if (_token.Token.WaitHandle.WaitOne(60000))
+                if (_token.Token.WaitHandle.WaitOne(10000))
                     break;
 
                 RemoteBuildManager.ClearExpiredBuilds();

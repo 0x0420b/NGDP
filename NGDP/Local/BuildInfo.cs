@@ -68,10 +68,12 @@ namespace NGDP.Local
 
                 void InstallLoader(string host, string path, byte[] hash)
                 {
-                    Scanner.WriteLine($"[CASC] Trying to load Install {hash.ToHexString()} ...");
-
                     Install.FromNetworkResource(host,
                         $"/{path}/data/{hash[0]:x2}/{hash[1]:x2}/{hash.ToHexString()}");
+
+                    if (Install.Loaded)
+                        Scanner.WriteLine($"[CASC] iInstall file loaded ({hash.ToHexString()}, {Install.Count} entries).");
+
                 }
 
                 InstallLoader(ServerInfo.Hosts[0], ServerInfo.Path, BuildConfiguration.Install[1]);
@@ -82,9 +84,6 @@ namespace NGDP.Local
                     else
                         Scanner.WriteLine($"[{VersionName}] Install file not found!");
                 }
-
-                if (Install.Loaded)
-                    Scanner.WriteLine($"[{VersionName}] Install downloaded ({Install.Count} entries).");
             }).ConfigureAwait(false);
 
             OnReady?.Invoke();
@@ -130,6 +129,8 @@ namespace NGDP.Local
 
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GC.Collect(2, GCCollectionMode.Forced);
+
+            Scanner.WriteLine($"[{VersionName}] Unloaded.");
         }
 
         public IndexStore.Record GetEntry(string fileName) => GetEntry(JenkinsHashing.Instance.ComputeHash(fileName));
