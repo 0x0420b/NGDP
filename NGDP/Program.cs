@@ -174,7 +174,7 @@ namespace NGDP
                         continue;
 
                     var shouldWarnEveryone = channelInfo.Filters.Any(f => f == branchName);
-                    if (shouldWarnEveryone)
+                    if (shouldWarnEveryone || channelInfo.ListenFor == "*" || string.IsNullOrEmpty(channelInfo.ListenFor))
                         knownServerPair.Value.SendMessage(SendType.Message, channelName, $"Build {buildName} deployed on branch {branchName}.");
 
                     var distinctSubscribers = channelInfo.GetSubscribers(branchName).ToArray();
