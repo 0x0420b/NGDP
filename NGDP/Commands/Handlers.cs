@@ -49,6 +49,8 @@ namespace NGDP.Commands
 
             var branchName = messageData.MessageArray[1];
             channelInfo.RegisterListener(messageData.Nick, branchName);
+
+            Scanner.WriteLine($"[COMMANDS] User {messageData.Nick} registered to updates on branch {branchName} on {client.Address} {messageData.Channel}");
         }
 
         [CommandHandler(".unnotify", "<branch_name>", 1)]
@@ -61,6 +63,8 @@ namespace NGDP.Commands
 
             var branchName = messageData.MessageArray[1];
             channelInfo.UnregisterListener(messageData.Nick, branchName);
+
+            Scanner.WriteLine($"[COMMANDS] User {messageData.Nick} unregistered to updates on branch {branchName} on {client.Address} {messageData.Channel}");
         }
 
         [CommandHandler(".unload", 0)]

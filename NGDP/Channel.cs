@@ -49,9 +49,7 @@ namespace NGDP
                 buildInfo.ContentConfiguration = new ContentConfiguration(serverInfo, versionInfo.Value.CDNConfig);
 
                 if (buildInfo.BuildConfiguration.Encoding == null || buildInfo.ContentConfiguration.Archives == null)
-                {
-                    Scanner.WriteLine($"[Channel {ChannelName}] Error retrieving either CDN or build configuration file for {versionName}.");
-                }
+                    Scanner.WriteLine($"[{versionName}] Error retrieving either CDN or build configuration file.");
                 else
                     Scanner.QueueInitialUpdate(buildInfo);
             }
