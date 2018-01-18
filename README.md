@@ -13,22 +13,55 @@ Note: This needs admin rights on Windows for the HTTP server.
 
 - `--conf`, `-c`: Path to the XML configuration file. Default to `conf.xml`
 
+## IRC Commands
+
+`.listen <branch_name>`
+Registers the current IRC channel to get notified about builds being pushed to the provided branch.
+
+`.forceupdate <branch_name>`
+Forces the bot to scan again the provided branch. This should not be needed since scans are performed every 30 seconds.
+
+`.notify <branch_name>`
+Registers the sender of this command to get highlighted when a build is deployed on the provided branch.
+
+`.unnotify <branch_name>`
+Does the exact opposite of `.notify`.
+
+`.unload <build_name>`
+Frees the provided build, if known and loaded, from memory.
+
+`.downloadfile <build_name> <path/to/file>`
+If the provided build is not already loaded, loads it. Otherwise, returns a link that proxies Blizzard's CDN,
+unpacking the archive for you so that you end up with an exploitable file. This command is not active if HTTP proxying
+was disabled in the settings.
+
+`.listbuilds`
+Lists known active builds. This can get lengthy and cause the bot to get kicked out of IRC if it runs for too long.
+
 ## XML File
 
 Example configuration file
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+  <!-- There can be multiple of these nodes. -->
   <server>
-    <user>casbot_dev</user>
+    <user>casbot_devel</user>
     <address>irc.rizon.net</address>
     <port>6660</port>
 
+    <!--
+      Each channel can have a `listen-for` attribute, which is a space-separated list
+      of branches for which the bot will print out global notifications of a build being pushed. 
+
+      If that attribute does not exist, the bot will not filter out any of its notifications.
+      Use * as wildcard.
+    -->
     <channel key="12345">your-channel-name</channel>
   </server>
 
   <proxy>
-    <!-- If omitted, HTTP proxy is disabled -->
+    <!-- If omitted, HTTP proxying is disabled -->
     <public-domain-name>www.please-suffer.com</public-domain-name>
 
     <!-- If omitted, defaults to 8080. -->
