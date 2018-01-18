@@ -141,6 +141,8 @@ namespace NGDP.Network
 
                         context.Response.StatusCode = (int)HttpStatusCode.OK;
 
+                        Scanner.WriteLine($"[PROXY] Serving {fileName} to {context.Request.RemoteEndPoint} - {archiveName}");
+
                         blte.PipeTo(context.Response.OutputStream);
                     }
                     else
@@ -148,7 +150,7 @@ namespace NGDP.Network
                         var sBuilder = new StringBuilder();
                         sBuilder.AppendLine($"File {fileName} cannot be downloaded - it might be an encrypted archive...");
                         sBuilder.AppendLine();
-                        sBuilder.AppendLine($"Request: {blte.URL}");
+                        sBuilder.AppendLine($"Requested archive: {blte.URL}");
                         if (fileEntry.ArchiveIndex != -1)
                             sBuilder.AppendLine($"Range: {fileEntry.Offset}-{fileEntry.Offset + fileEntry.Size - 1}");
                         WriteError(context, sBuilder.ToString(), HttpStatusCode.InternalServerError);

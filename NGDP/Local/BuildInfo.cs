@@ -195,6 +195,8 @@ namespace NGDP.Local
 
                 blte.Send($"/{ServerInfo.Path}/data/{archiveName.Substring(0, 2)}/{archiveName.Substring(2, 2)}/{archiveName}");
 
+                Scanner.WriteLine($"[{VersionName}] Downloading {localFileName} from {blte.URL} ...");
+
                 using (var fileStream = File.OpenWrite(completeFilePath))
                     blte.PipeTo(fileStream);
             }
