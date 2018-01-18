@@ -10,7 +10,7 @@ namespace NGDP.Commands
 {
     public static class Handlers
     {
-        [CommandHandler(".register", ".listen <channel name>", 1)]
+        [CommandHandler(".listen", "<channel name>", 1)]
         public static void JoinChannel(IrcClient client, IrcMessageData messageData)
         {
             var channelName = messageData.MessageArray[1];
@@ -46,7 +46,7 @@ namespace NGDP.Commands
             Scanner.Channels.Add(channel);
         }
 
-        [CommandHandler(".forceupdate", ".forceupdate <branch_name>", 1)]
+        [CommandHandler(".forceupdate", "<branch_name>", 1)]
         public static void ForceChannelUpdate(IrcClient client, IrcMessageData messageData)
         {
             var channelName = messageData.MessageArray[1];
@@ -76,7 +76,7 @@ namespace NGDP.Commands
             buildInfo.Unload();
         }
 
-        [CommandHandler(".downloadfile", ".downloadfile <build name string> <filePath>", -1)]
+        [CommandHandler(".downloadfile", "<build name string> <filePath>", 2)]
         public static void HandleDownloadFile(IrcClient client, IrcMessageData messageData)
         {
             if (!Scanner.Configuration.Proxy.Enabled)

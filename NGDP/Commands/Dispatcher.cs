@@ -31,7 +31,7 @@ namespace NGDP.Commands
             if (!_attrs.TryGetValue(data.MessageArray[0], out var commandAttributes))
                 return;
 
-            if (commandAttributes.ExpectedArgumentCount != data.MessageArray.Length - 1)
+            if (commandAttributes.ExpectedArgumentCount < data.MessageArray.Length - 1)
                 client.SendReply(data, $"{data.Nick}: Invalid argument count. Expected usage: {commandAttributes.Command} {commandAttributes.Usage}");
             else
                 handler(client, data);
