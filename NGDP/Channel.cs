@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using Meebey.SmartIrc4net;
 using NGDP.Local;
 using NGDP.NGDP;
 using NGDP.Patch;
@@ -42,7 +41,7 @@ namespace NGDP
                 if (!silent)
                     BuildDeployed?.Invoke(ChannelName, versionName);
 
-                Scanner.WriteLine($"[{versionName}] deployed to {versionInfo.Value.Region}");
+                Scanner.WriteLine($"[{versionName}] Deployed to {versionInfo.Value.Region}");
 
                 // Get build info
                 buildInfo.BuildConfiguration = new BuildConfiguration(serverInfo, versionInfo.Value.BuildConfig);

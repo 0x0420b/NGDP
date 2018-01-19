@@ -167,21 +167,17 @@ namespace NGDP
                 if (serverInfo == null)
                     continue;
 
-                foreach (var channelName in knownServerPair.Value.JoinedChannels)
+                foreach (var channelInfo in serverInfo.Channels)
                 {
-                    var channelInfo = serverInfo.GetChannel(channelName);
-                    if (channelInfo == null)
-                        continue;
-
                     var shouldWarnEveryone = channelInfo.Filters.Any(f => f == branchName);
                     if (shouldWarnEveryone || channelInfo.ListenFor == "*" || string.IsNullOrEmpty(channelInfo.ListenFor))
-                        knownServerPair.Value.SendMessage(SendType.Message, channelName, $"Build {buildName} deployed on branch {branchName}.");
+                        knownServerPair.Value.SendMessage(SendType.Message, "#" + channelInfo.Name, $"Build {buildName} deployed on branch {branchName}.");
 
                     var distinctSubscribers = channelInfo.GetSubscribers(branchName).ToArray();
                     if (distinctSubscribers.Length == 0)
                         continue;
 
-                    knownServerPair.Value.SendMessage(SendType.Message, channelName, $"{string.Join(", ", distinctSubscribers)}: Wakey-wakey! Build {buildName} deployed!");
+                    knownServerPair.Value.SendMessage(SendType.Message, "#" + channelInfo.Name, $"{string.Join(", ", distinctSubscribers)}: Wakey-wakey! Build {buildName} deployed!");
                 }
             }
         }
@@ -214,7 +210,7 @@ namespace NGDP
             Task.Run(() =>
             {
                 foreach (var channel in Channels)
-                    channel.Update(true); // Initial update is silent to avoid spamming IRC on connect.
+                    channel.Update(false); // Initial update is silent to avoid spamming IRC on connect.
 
                 while (!_token.IsCancellationRequested)
                 {
