@@ -210,7 +210,7 @@ namespace NGDP
             Task.Run(() =>
             {
                 foreach (var channel in Channels)
-                    channel.Update(false); // Initial update is silent to avoid spamming IRC on connect.
+                    channel.Update(true); // Initial update is silent to avoid spamming IRC on connect.
 
                 while (!_token.IsCancellationRequested)
                 {
