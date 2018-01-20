@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using NGDP.Local;
 using NGDP.NGDP;
@@ -11,50 +13,67 @@ namespace NGDP
         public string ChannelName { get; set; }
         public string DisplayName { get; set; }
 
-        public event Action<string, string> BuildDeployed;
+        public event Action<string, string, string> BuildDeployed;
+
+        public Versions Version { get; private set; }
+        public CDNs CDN { get; private set; }
 
         public void Update(bool silent)
         {
-            var versions = new Versions(ChannelName);
-            var cdns = new CDNs(ChannelName);
+            Version = new Versions(ChannelName);
+            CDN = new CDNs(ChannelName);
 
             // Walk through versions
-            foreach (var versionInfo in versions.Records)
+            foreach (var versionInfo in Version.Records)
             {
-                // Get CDN data.
-                if (!cdns.Records.TryGetValue(versionInfo.Value.Region, out CDNs.Record serverInfo))
-                    serverInfo = cdns.Records["eu"];
-
                 var versionName = versionInfo.Value.GetName(DisplayName);
 
-                if (RemoteBuildManager.IsBuildKnown(versionName))
+                // Get CDN data.
+                if (!CDN.Records.TryGetValue(versionInfo.Value.Region, out var serverInfo))
                     continue;
 
-                var buildInfo = new BuildInfo {
-                    Channel = versionInfo.Value.Channel,
-                    VersionName = versionName,
-                    ServerInfo = serverInfo
-                };
+                var currentBuildInfo = RemoteBuildManager.GetBuild(versionName);
+                var isNewBuild = currentBuildInfo == null;
+                if (!isNewBuild)
+                {
+                    currentBuildInfo.Regions.Add(versionInfo.Value.Region);
+                }
+                else
+                {
+                    currentBuildInfo = new BuildInfo
+                    {
+                        Version = versionInfo.Value,
+                        CDN = serverInfo,
 
-                RemoteBuildManager.AddBuild(buildInfo);
+                        VersionName = versionName
+                    };
 
-                if (!silent)
-                    BuildDeployed?.Invoke(ChannelName, versionName);
-
-                Scanner.WriteLine($"[{versionName}] Deployed to {versionInfo.Value.Region}");
+                    RemoteBuildManager.AddBuild(currentBuildInfo);
+                }
 
                 // Get build info
-                buildInfo.BuildConfiguration = new BuildConfiguration(serverInfo, versionInfo.Value.BuildConfig);
-                buildInfo.ContentConfiguration = new ContentConfiguration(serverInfo, versionInfo.Value.CDNConfig);
+                currentBuildInfo.BuildConfiguration = new BuildConfiguration(serverInfo, versionInfo.Value.BuildConfig);
+                currentBuildInfo.ContentConfiguration = new ContentConfiguration(serverInfo, versionInfo.Value.CDNConfig);
 
-                if (buildInfo.BuildConfiguration.Encoding == null || buildInfo.ContentConfiguration.Archives == null)
+                if (currentBuildInfo.BuildConfiguration.Encoding == null || currentBuildInfo.ContentConfiguration.Archives == null)
                     Scanner.WriteLine($"[{versionName}] Error retrieving either CDN or build configuration file.");
-                else
-                    Scanner.QueueInitialUpdate(buildInfo);
+                else if (isNewBuild)
+                    Scanner.QueueInitialUpdate(currentBuildInfo);
             }
 
-            // Sleep one second to make sure every message goes through.
-            Thread.Sleep(1000);
+            foreach (var currentBuild in RemoteBuildManager.Builds.Values.Where(b => b.JustDeployed))
+            {
+                currentBuild.JustDeployed = true;
+                var coalescedRegions = string.Join(", ", currentBuild.Regions).ToUpperInvariant();
+
+                if (!silent)
+                    BuildDeployed?.Invoke(ChannelName, currentBuild.VersionName, coalescedRegions);
+
+                Scanner.WriteLine($"[{currentBuild.VersionName}] Deployed to regions {coalescedRegions}.");
+            }
+
+            // Sleep half a second to make sure every message goes through.
+            Thread.Sleep(500);
         }
     }
 }

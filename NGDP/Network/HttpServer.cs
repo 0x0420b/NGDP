@@ -117,7 +117,7 @@ namespace NGDP.Network
 
             try
             {
-                using (var blte = new BLTE(buildInfo.ServerInfo.Hosts[0]))
+                using (var blte = new BLTE(buildInfo.CDN.Hosts[0]))
                 {
                     if (fileEntry.ArchiveIndex != -1)
                         blte.AddHeader("Range", $"bytes={fileEntry.Offset}-{fileEntry.Offset + fileEntry.Size - 1}");
@@ -126,7 +126,7 @@ namespace NGDP.Network
                     if (fileEntry.ArchiveIndex != -1)
                         archiveName = buildInfo.Indices.Archives[fileEntry.ArchiveIndex].ToHexString();
 
-                    blte.Send($"/{buildInfo.ServerInfo.Path}/data/{archiveName.Substring(0, 2)}/{archiveName.Substring(2, 2)}/{archiveName}");
+                    blte.Send($"/{buildInfo.CDN.Path}/data/{archiveName.Substring(0, 2)}/{archiveName.Substring(2, 2)}/{archiveName}");
 
                     Scanner.WriteLine($"[PROXY] Serving {fileName} through {blte.URL}.");
 

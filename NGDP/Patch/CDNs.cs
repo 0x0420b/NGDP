@@ -35,7 +35,7 @@ namespace NGDP.Patch
             }
         }
 
-        public struct Record
+        public class Record
         {
             public string Name { get; set; }
             public string Path { get; set; }

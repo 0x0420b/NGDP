@@ -141,7 +141,7 @@ namespace NGDP.Commands
         public static void HandleListBuilds(IrcClient client, IrcMessageData messageData)
         {
             foreach (var kv in RemoteBuildManager.Builds)
-                client.SendReply(messageData, $"* {kv.Value.VersionName}");
+                client.SendReply(messageData, $"* {kv.Value.VersionName}: {string.Join(", ", kv.Value.Regions)}");
         }
 
         private static void CheckFileExists(string buildName,

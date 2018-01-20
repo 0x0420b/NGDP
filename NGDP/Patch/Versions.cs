@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using NGDP.Network;
+using NGDP.Utilities;
 
 namespace NGDP.Patch
 {
@@ -40,7 +42,7 @@ namespace NGDP.Patch
             }
         }
 
-        public struct Record
+        public class Record
         {
             public string Region { get; set; }
             public byte[] BuildConfig { get; set; }
@@ -53,6 +55,26 @@ namespace NGDP.Patch
             public string Channel { get; set; }
 
             public string GetName(string channel) => $"{Channel}-{BuildID}patch{VersionsName.Substring(0, 5)}_{channel}";
+
+            public bool Equals(Record otherRegionVersion)
+            {
+                if (otherRegionVersion.BuildID != BuildID)
+                    return true;
+
+                if (!ByteArrayComparer.Instance.Equals(otherRegionVersion.BuildConfig, BuildConfig))
+                    return false;
+
+                if (!ByteArrayComparer.Instance.Equals(otherRegionVersion.CDNConfig, CDNConfig))
+                    return false;
+
+                if (!ByteArrayComparer.Instance.Equals(otherRegionVersion.ProductConfig, ProductConfig))
+                    return false;
+
+                if (!string.Equals(VersionsName, otherRegionVersion.VersionsName))
+                    return false;
+
+                return true;
+            }
         }
 
         private static int GetHexVal(char hex)

@@ -10,7 +10,7 @@ namespace NGDP.Local
 
         public static void AddBuild(BuildInfo build) => Builds.Add(build.VersionName.Trim(), build);
 
-        public static BuildInfo GetBuild(string buildName) => Builds[buildName.Trim()];
+        public static BuildInfo GetBuild(string buildName) => Builds.TryGetValue(buildName.Trim(), out var v) ? v : null;
 
         public static void ClearExpiredBuilds()
         {

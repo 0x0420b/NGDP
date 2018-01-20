@@ -159,7 +159,7 @@ namespace NGDP
             RemoteBuildManager.ClearExpiredBuilds();
         }
 
-        public static void OnBuildDeployed(string branchName, string buildName)
+        public static void OnBuildDeployed(string branchName, string buildName, string regionCode)
         {
             foreach (var knownServerPair in _ircClients)
             {
@@ -171,7 +171,7 @@ namespace NGDP
                 {
                     var shouldWarnEveryone = channelInfo.Filters.Any(f => f == branchName);
                     if (shouldWarnEveryone || channelInfo.ListenFor == "*" || string.IsNullOrEmpty(channelInfo.ListenFor))
-                        knownServerPair.Value.SendMessage(SendType.Message, "#" + channelInfo.Name, $"Build {buildName} deployed on branch {branchName}.");
+                        knownServerPair.Value.SendMessage(SendType.Message, "#" + channelInfo.Name, $"Build {buildName} deployed on branch {branchName} [{regionCode.ToUpperInvariant()}].");
 
                     var distinctSubscribers = channelInfo.GetSubscribers(branchName).ToArray();
                     if (distinctSubscribers.Length == 0)

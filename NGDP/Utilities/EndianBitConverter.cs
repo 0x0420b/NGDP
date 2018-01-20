@@ -14,7 +14,7 @@ namespace NGDP.Utilities
         /// </summary>
         /// <remarks>
         /// Different computer architectures store data using different byte orders. "Big-endian"
-        /// means the most significant byte is on the left end of a word. "Little-endian" means the 
+        /// means the most significant byte is on the left end of a word. "Little-endian" means the
         /// most significant byte is on the right end of a word.
         /// </remarks>
         /// <returns>true if this converter is little-endian, false otherwise.</returns>
@@ -44,7 +44,7 @@ namespace NGDP.Utilities
 
         #region Double/primitive conversions
         /// <summary>
-        /// Converts the specified double-precision floating point number to a 
+        /// Converts the specified double-precision floating point number to a
         /// 64-bit signed integer. Note: the endianness of this converter does not
         /// affect the returned value.
         /// </summary>
@@ -56,7 +56,7 @@ namespace NGDP.Utilities
         }
 
         /// <summary>
-        /// Converts the specified 64-bit signed integer to a double-precision 
+        /// Converts the specified 64-bit signed integer to a double-precision
         /// floating point number. Note: the endianness of this converter does not
         /// affect the returned value.
         /// </summary>
@@ -68,7 +68,7 @@ namespace NGDP.Utilities
         }
 
         /// <summary>
-        /// Converts the specified single-precision floating point number to a 
+        /// Converts the specified single-precision floating point number to a
         /// 32-bit signed integer. Note: the endianness of this converter does not
         /// affect the returned value.
         /// </summary>
@@ -80,7 +80,7 @@ namespace NGDP.Utilities
         }
 
         /// <summary>
-        /// Converts the specified 32-bit signed integer to a single-precision floating point 
+        /// Converts the specified 32-bit signed integer to a single-precision floating point
         /// number. Note: the endianness of this converter does not
         /// affect the returned value.
         /// </summary>
@@ -117,7 +117,7 @@ namespace NGDP.Utilities
         }
 
         /// <summary>
-        /// Returns a double-precision floating point number converted from eight bytes 
+        /// Returns a double-precision floating point number converted from eight bytes
         /// at a specified position in a byte array.
         /// </summary>
         /// <param name="value">An array of bytes.</param>
@@ -129,7 +129,7 @@ namespace NGDP.Utilities
         }
 
         /// <summary>
-        /// Returns a single-precision floating point number converted from four bytes 
+        /// Returns a single-precision floating point number converted from four bytes
         /// at a specified position in a byte array.
         /// </summary>
         /// <param name="value">An array of bytes.</param>
@@ -261,7 +261,7 @@ namespace NGDP.Utilities
         /// <param name="value">An array of bytes.</param>
         /// <remarks>All the elements of value are converted.</remarks>
         /// <returns>
-        /// A String of hexadecimal pairs separated by hyphens, where each pair 
+        /// A String of hexadecimal pairs separated by hyphens, where each pair
         /// represents the corresponding element in value; for example, "7F-2C-4A".
         /// </returns>
         public static string ToString(byte[] value)
@@ -276,7 +276,7 @@ namespace NGDP.Utilities
         /// <param name="startIndex">The starting position within value.</param>
         /// <remarks>The elements from array position startIndex to the end of the array are converted.</remarks>
         /// <returns>
-        /// A String of hexadecimal pairs separated by hyphens, where each pair 
+        /// A String of hexadecimal pairs separated by hyphens, where each pair
         /// represents the corresponding element in value; for example, "7F-2C-4A".
         /// </returns>
         public static string ToString(byte[] value, int startIndex)
@@ -292,7 +292,7 @@ namespace NGDP.Utilities
         /// <param name="length">The number of bytes to convert.</param>
         /// <remarks>The length elements from array position startIndex are converted.</remarks>
         /// <returns>
-        /// A String of hexadecimal pairs separated by hyphens, where each pair 
+        /// A String of hexadecimal pairs separated by hyphens, where each pair
         /// represents the corresponding element in value; for example, "7F-2C-4A".
         /// </returns>
         public static string ToString(byte[] value, int startIndex, int length)
@@ -303,7 +303,7 @@ namespace NGDP.Utilities
 
         #region    Decimal conversions
         /// <summary>
-        /// Returns a decimal value converted from sixteen bytes 
+        /// Returns a decimal value converted from sixteen bytes
         /// at a specified position in a byte array.
         /// </summary>
         /// <param name="value">An array of bytes.</param>
@@ -314,8 +314,8 @@ namespace NGDP.Utilities
             // HACK: This always assumes four parts, each in their own endianness,
             // starting with the first part at the start of the byte array.
             // On the other hand, there's no real format specified...
-            int[] parts = new int[4];
-            for (int i = 0; i < 4; i++)
+            var parts = new int[4];
+            for (var i = 0; i < 4; i++)
             {
                 parts[i] = ToInt32(value, startIndex + i * 4);
             }
@@ -329,9 +329,9 @@ namespace NGDP.Utilities
         /// <returns>An array of bytes with length 16.</returns>
         public byte[] GetBytes(decimal value)
         {
-            byte[] bytes = new byte[16];
-            int[] parts = decimal.GetBits(value);
-            for (int i = 0; i < 4; i++)
+            var bytes = new byte[16];
+            var parts = decimal.GetBits(value);
+            for (var i = 0; i < 4; i++)
             {
                 CopyBytesImpl(parts[i], 4, bytes, i * 4);
             }
@@ -347,8 +347,8 @@ namespace NGDP.Utilities
         /// <param name="index">The first index into the array to copy the bytes into</param>
         public void CopyBytes(decimal value, byte[] buffer, int index)
         {
-            int[] parts = decimal.GetBits(value);
-            for (int i = 0; i < 4; i++)
+            var parts = decimal.GetBits(value);
+            for (var i = 0; i < 4; i++)
             {
                 CopyBytesImpl(parts[i], 4, buffer, i * 4 + index);
             }
@@ -365,7 +365,7 @@ namespace NGDP.Utilities
         /// <param name="bytes">The number of significant bytes to return</param>
         private byte[] GetBytes(long value, int bytes)
         {
-            byte[] buffer = new byte[bytes];
+            var buffer = new byte[bytes];
             CopyBytes(value, bytes, buffer, 0);
             return buffer;
         }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime;
@@ -18,7 +19,9 @@ namespace NGDP.Local
 
         public BuildConfiguration BuildConfiguration { get; set; }
         public ContentConfiguration ContentConfiguration { get; set; }
-        public CDNs.Record ServerInfo { get; set; }
+
+        public Versions.Record Version { get; set; }
+        public CDNs.Record CDN { get; set; }
 
         public string Channel { get; set; }
         public string VersionName { get; set; }
@@ -29,6 +32,10 @@ namespace NGDP.Local
         public bool Ready => Encoding.Count != 0 && Root.Count != 0;
 
         public bool Expired { get; set; } = false;
+
+        public bool JustDeployed { get; set; } = true;
+
+        public HashSet<string> Regions { get; } = new HashSet<string>();
 
         public async Task Prepare(bool downloadFiles = false)
         {
@@ -47,8 +54,8 @@ namespace NGDP.Local
             await Task.Run(() =>
             {
                 Scanner.WriteLine($"[{VersionName}] Downloading encoding {BuildConfiguration.Encoding[1].ToHexString()} ...");
-                Encoding.FromNetworkResource(ServerInfo.Hosts[0],
-                    $"/{ServerInfo.Path}/data/{BuildConfiguration.Encoding[1][0]:x2}/{BuildConfiguration.Encoding[1][1]:x2}/{BuildConfiguration.Encoding[1].ToHexString()}");
+                Encoding.FromNetworkResource(CDN.Hosts[0],
+                    $"/{CDN.Path}/data/{BuildConfiguration.Encoding[1][0]:x2}/{BuildConfiguration.Encoding[1][1]:x2}/{BuildConfiguration.Encoding[1].ToHexString()}");
                 Scanner.WriteLine($"[{VersionName}] Encoding downloaded ({Encoding.Count} entries).");
 
                 if (!Encoding.TryGetValue(BuildConfiguration.Root, out var rootEncodingEntry))
@@ -58,11 +65,11 @@ namespace NGDP.Local
                 }
 
                 Scanner.WriteLine($"[{VersionName}] Downloading root {rootEncodingEntry.Key.ToHexString()} ...");
-                Root.FromStream(ServerInfo.Hosts[0], $"/{ServerInfo.Path}/data/{rootEncodingEntry.Key[0]:x2}/{rootEncodingEntry.Key[1]:x2}/{rootEncodingEntry.Key.ToHexString()}");
+                Root.FromStream(CDN.Hosts[0], $"/{CDN.Path}/data/{rootEncodingEntry.Key[0]:x2}/{rootEncodingEntry.Key[1]:x2}/{rootEncodingEntry.Key.ToHexString()}");
                 Scanner.WriteLine($"[{VersionName}] Root downloaded ({Root.Count} entries).");
 
                 Scanner.WriteLine($"[{VersionName}] Downloading {ContentConfiguration.Archives.Length} indices ...");
-                Indices.FromStream(ServerInfo.Hosts[0], ContentConfiguration.Archives);
+                Indices.FromStream(CDN.Hosts[0], ContentConfiguration.Archives);
                 Scanner.WriteLine($"[{VersionName}] Indices downloaded ({Indices.Count} entries).");
 
                 void InstallLoader(string host, string path, byte[] hash)
@@ -74,11 +81,11 @@ namespace NGDP.Local
                         Scanner.WriteLine($"[{VersionName}] Install file loaded ({hash.ToHexString()}, {Install.Count} entries).");
                 }
 
-                InstallLoader(ServerInfo.Hosts[0], ServerInfo.Path, BuildConfiguration.Install[1]);
+                InstallLoader(CDN.Hosts[0], CDN.Path, BuildConfiguration.Install[1]);
                 if (!Install.Loaded)
                 {
                     if (Encoding.TryGetValue(BuildConfiguration.Install[0], out var encodingEntry))
-                        InstallLoader(ServerInfo.Hosts[0], ServerInfo.Path, encodingEntry.Key);
+                        InstallLoader(CDN.Hosts[0], CDN.Path, encodingEntry.Key);
                     else
                         Scanner.WriteLine($"[{VersionName}] Install file not found!");
                 }
@@ -188,7 +195,7 @@ namespace NGDP.Local
             if (fileEntry == null)
                 return;
 
-            using (var blte = new BLTE(ServerInfo.Hosts[0]))
+            using (var blte = new BLTE(CDN.Hosts[0]))
             {
                 if (fileEntry.ArchiveIndex != -1)
                     blte.AddHeader("Range", $"bytes={fileEntry.Offset}-{fileEntry.Offset + fileEntry.Size - 1}");
@@ -197,7 +204,7 @@ namespace NGDP.Local
                 if (fileEntry.ArchiveIndex != -1)
                     archiveName = Indices.Archives[fileEntry.ArchiveIndex].ToHexString();
 
-                blte.Send($"/{ServerInfo.Path}/data/{archiveName.Substring(0, 2)}/{archiveName.Substring(2, 2)}/{archiveName}");
+                blte.Send($"/{CDN.Path}/data/{archiveName.Substring(0, 2)}/{archiveName.Substring(2, 2)}/{archiveName}");
 
                 Scanner.WriteLine($"[{VersionName}] Downloading {localFileName} from {blte.URL} ...");
 
