@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using WMPQ.Protocol;
 using WMPQ.Protocol.Client;
 using WMPQ.Protocol.Server;
@@ -12,8 +11,6 @@ namespace WMPQ
 {
     class Program
     {
-        private static readonly HttpClient client = new HttpClient();
-
         static void Main(string[] args)
         {
             var clientBuilds = new[]
@@ -79,8 +76,13 @@ namespace WMPQ
                 3734, 3712, 3702, 3694, 3494, 3368
             };
 
-            foreach (var build in clientBuilds)
-                DownloadClientBuild("WoW", build);
+            if (args.Length == 0)
+            {
+                foreach (var build in clientBuilds.Distinct())
+                    DownloadClientBuild("WoW", build);
+            }
+            else
+                DownloadMFIL(args[0]);
         }
 
         private static void DownloadClientBuild(string programName, int build)
@@ -89,39 +91,72 @@ namespace WMPQ
             if (responseInfo == null)
                 return;
 
+            Console.WriteLine($"[{build}] Found {responseInfo.BuildId} as target build.");
+
+            Console.WriteLine($"[{build}] Loading XML {responseInfo.Config}.");
             var serverConfig = SendJsonGet<Config>(responseInfo.Config);
 
             var baseAddress = serverConfig.Version.Products[0].Servers[0].Url;
-            var baseUri = new Uri(baseAddress);
-            var mfilName = $"wow-{responseInfo.BuildId}-{responseInfo.MfilName}.mfil";
+            var mfilName = $"wow-{responseInfo.BuildId}-{responseInfo.Manifest}.mfil";
 
-            var webRequest = (HttpWebRequest) WebRequest.Create(Path.Combine(baseAddress, mfilName));
+            DownloadMFIL(Path.Combine(baseAddress, mfilName));
+        }
+
+        private static void DownloadMFIL(string address)
+        {
+            var webRequest = (HttpWebRequest)WebRequest.Create(address);
             webRequest.Method = "GET";
 
-            var webResponse = (HttpWebResponse) webRequest.GetResponse();
+            Console.WriteLine("Downloading MFIL from {0}", webRequest.Address);
+
+            var webResponse = (HttpWebResponse)webRequest.GetResponse();
             var mfil = new MFIL(webResponse.GetResponseStream());
 
             foreach (var knownFile in mfil.Records)
             {
-                var remoteFilePath = Path.Combine(baseAddress, knownFile.File);
+                var fileUri = new Uri(address.Replace(Path.GetFileName(address), knownFile.File));
 
                 var localSegments = new List<string>() {"."};
-                localSegments.AddRange(baseUri.Segments.Skip(1));
-                localSegments.AddRange(knownFile.File.Split('/'));
+                localSegments.AddRange(fileUri.Segments.Skip(1));
                 var localFilePath = Path.Combine(localSegments.Select(s => s.Replace("/", "")).ToArray());
 
                 Directory.CreateDirectory(Path.GetDirectoryName(localFilePath));
 
-                if (File.Exists(localFilePath))
+                var localFileInfo = new FileInfo(localFilePath);
+                if (localFileInfo.Exists)
+                {
                     continue;
 
-                using (var localFileStream = File.OpenWrite(localFilePath))
-                {
-                    Console.WriteLine("[{1}] Backing up {0}", knownFile.File, responseInfo.BuildId);
+                    // Console.WriteLine("{2}: Expected size {0}, found {1}", knownFile.Size, localFileInfo.Length, knownFile.File);
+                    // localFilePath.Replace(".MPQ", $"-{build}.MPQ");
+                    //
+                    // localFileInfo.Delete();
+                    // localFileInfo = new FileInfo(localFilePath);
+                }
 
-                    SendGet(remoteFilePath)?.CopyTo(localFileStream);
+                using (var localFileStream = localFileInfo.OpenWrite())
+                {
+                    Console.WriteLine("[{0}] Downloading ({1:n0} bytes, version {2})", knownFile.Version, knownFile.Size,
+                        knownFile.Version);
+                    Console.WriteLine("     From: {0}", fileUri);
+                    Console.WriteLine("     To:   {0}", localFilePath);
+
+                    SendGet(fileUri.ToString())?.CopyTo(localFileStream);
                 }
             }
+
+            var localMfilPath = string.Join("/", new Uri(address).Segments.Skip(1));
+            if (File.Exists(localMfilPath))
+                return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(localMfilPath));
+
+            webRequest = (HttpWebRequest)WebRequest.Create(address);
+            webRequest.Method = "GET";
+            webResponse = (HttpWebResponse)webRequest.GetResponse();
+            using (var localFile = File.OpenWrite(localMfilPath))
+            using (var netStream = webResponse.GetResponseStream())
+                netStream.CopyTo(localFile);
         }
 
         private static PatchInfoResponse SendPatchInfoRequest(string programName, int clientBuild)

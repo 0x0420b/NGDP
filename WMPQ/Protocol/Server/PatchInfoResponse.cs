@@ -28,7 +28,7 @@ namespace WMPQ.Protocol.Server
 
             public string Config => _valueTokens[0];
             public string TorrentHash => _valueTokens[1];
-            public string MfilName => _valueTokens[2];
+            public string Manifest => _valueTokens[2];
             public int BuildId => int.Parse(_valueTokens[3]);
         }
 

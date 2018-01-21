@@ -7,7 +7,7 @@ namespace WMPQ.Protocol
     public sealed class MFIL
     {
         public int Version { get; }
-        public string ServerPath { get; } = string.Empty;
+        public Dictionary<string, string> ServerPath { get; } = new Dictionary<string, string>();
 
         public class Record
         {
@@ -15,6 +15,7 @@ namespace WMPQ.Protocol
             public long Size { get; set; }
             public int Version { get; set; }
             public int Flags { get; set; }
+            public string Path { get; set; }
         }
 
         public List<Record> Records { get; } = new List<Record>();
@@ -33,10 +34,9 @@ namespace WMPQ.Protocol
                             Version = int.Parse(lineTokens[1]);
                             break;
                         case "serverpath":
-                            var hasServerPath = lineTokens[1] != "base";
                             var nextLine = reader.ReadLine();
-                            if (hasServerPath && nextLine != null)
-                                ServerPath = nextLine.Split('=')[1];
+                            if (nextLine != null)
+                                ServerPath[lineTokens[1]] = nextLine.Split('=')[1];
                             break;
                         case "file":
                             LoadFileRecord(lineTokens[1], reader);
@@ -52,15 +52,29 @@ namespace WMPQ.Protocol
         {
             var record = new Record {File = fileName};
 
-            reader.ReadLine(); // Name duplicata
-            var sizeLine = reader.ReadLine();
-            var versionLine = reader.ReadLine();
-            var flagsLine = reader.ReadLine();
-            reader.ReadLine(); // Path (always base?)
+            var blockLines = new Dictionary<string, string>();
 
-            record.Size = long.Parse(sizeLine.Split('=')[1]);
-            record.Version = int.Parse(versionLine.Split('=')[1]);
-            record.Flags = int.Parse(flagsLine.Split('=')[1]);
+            while (reader.Peek() != 'f') // file=....
+            {
+                var line = reader.ReadLine();
+                if (string.IsNullOrEmpty(line))
+                    break;
+
+                var lineTokens = line.Split('=');
+                blockLines[lineTokens[0].Trim()] = lineTokens[1].Trim();
+            }
+
+            if (!fileName.EndsWith(".MPQ") && Version == 2)
+                return;
+
+            if (blockLines.ContainsKey("size"))
+                record.Size = long.Parse(blockLines["size"]);
+
+            if (blockLines.ContainsKey("version"))
+                record.Version = int.Parse(blockLines["version"]);
+
+            if (blockLines.ContainsKey("flags"))
+                record.Flags = int.Parse(blockLines["flags"]);
 
             Records.Add(record);
         }
