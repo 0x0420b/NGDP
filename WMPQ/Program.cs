@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using WMPQ.Protocol;
 using WMPQ.Protocol.Client;
 using WMPQ.Protocol.Server;
@@ -82,7 +83,153 @@ namespace WMPQ
                     DownloadClientBuild("WoW", build);
             }
             else
-                DownloadMFIL(args[0]);
+                switch (args[0])
+                {
+                    case "--mfil":
+                        DownloadMFIL(args[1]);
+                        break;
+                    case "--mfils":
+                        using (var reader = new StreamReader(args[1]))
+                        {
+                            string line;
+                            while ((line = reader.ReadLine()) != null)
+                                DownloadMFIL(line);
+                        }
+                        break;
+                    case "--bruteforce":
+                        TryBruteforceArchives(int.Parse(args[1]), int.Parse(args[2]), int.Parse(args[3]));
+                        break;
+                    case "--maldivia":
+                        ParseMaldiviaDump(args[1]);
+                        break;
+                }
+        }
+
+        private static void ParseMaldiviaDump(string filePath)
+        {
+            using (var reader = new StreamReader(filePath))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    var tokens = line.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToArray();
+                    if (tokens.Length == 0 || tokens.Length != 6)
+                        continue;
+
+                    if (tokens[0] == "program")
+                        continue;
+
+                    var programName = tokens[0].ToLower();
+                    var configUrl = tokens[5];
+                    var mfil = tokens[4];
+                    var tfil = tokens[3];
+
+                    Console.WriteLine($"[{programName}] MFIL: {mfil}");
+
+                    // 1. Copy config file
+                    using (var netStream = SendGet(configUrl))
+                    {
+                        if (netStream != null)
+                        {
+                            var configUri = "./" + new Uri(configUrl).AbsolutePath;
+                            Directory.CreateDirectory(Path.GetDirectoryName(configUri));
+                            if (!File.Exists(configUri))
+                            {
+                                using (var fs = File.OpenWrite(configUri))
+                                    netStream.CopyTo(fs);
+                            }
+                        }
+                    }
+
+                    var configInfo = SendGet(configUrl)?.Deserialize<Config>();
+                    if (configInfo != null)
+                    {
+                        var productInfo = configInfo.Version.Products.FirstOrDefault(p => p.Product.ToLower() == programName);
+                        if (productInfo == null)
+                            continue;
+
+                        var serverBase = productInfo.Servers.First();
+                        var mfilName = $"{programName.ToLowerInvariant()}-{tokens[2]}-{mfil}.mfil";
+                        var tfilName = $"{programName.ToLowerInvariant()}-{tokens[2]}-{tfil}.tfil";
+                        using (var netStream = SendGet($"{serverBase.Url}{mfilName}"))
+                        {
+                            if (netStream != null)
+                            {
+                                var uri = "./" + new Uri($"{serverBase.Url}{mfilName}").AbsolutePath;
+                                Directory.CreateDirectory(Path.GetDirectoryName(uri));
+                                if (!File.Exists(uri))
+                                    using (var fs = File.OpenWrite(uri))
+                                        netStream.CopyTo(fs);
+                            }
+                        }
+
+                        // using (var netStream = SendGet($"{serverBase.Url}{tfilName}"))
+                        // {
+                        //     var uri = "./" + new Uri($"{serverBase.Url}{tfilName}").AbsolutePath;
+                        //     Directory.CreateDirectory(Path.GetDirectoryName(uri));
+                        //     if (!File.Exists(uri))
+                        //         using (var fs = File.OpenWrite(uri))
+                        //             netStream.CopyTo(fs);
+                        // }
+                    }
+                    else
+                        Console.WriteLine($"[{programName}] Unable to read {configUrl}...");
+                }
+            }
+        }
+
+        private static void TryBruteforceArchives(int baseDirect, int minBuild, int maxBuild)
+        {
+            var dataFile = "Data/wow-update-base-{0}.MPQ";
+            var winUpdateFile = "Updates/wow-0-{0}-{1}-final.MPQ";
+
+            var host = $"http://ak.worldofwarcraft.com.edgesuite.net/wow-pod-retail/NA/{baseDirect}.direct/";
+            dataFile = Path.Combine(host, dataFile);
+            winUpdateFile = Path.Combine(host, winUpdateFile);
+
+            Parallel.For(minBuild, maxBuild + 1, new ParallelOptions() {MaxDegreeOfParallelism = 2}, i =>
+            {
+                Console.WriteLine($"[] Testing build {i}");
+
+                var dataExists = FileExistsRemote(string.Format(dataFile, i));
+                var winExists = FileExistsRemote(string.Format(winUpdateFile, i, "Win"));
+                var osxExists = FileExistsRemote(string.Format(winUpdateFile, i, "OSX"));
+
+                if (dataExists && winExists && osxExists)
+                    Console.WriteLine($"[*] Found build {i}");
+            });
+        }
+
+        private static bool FileExistsRemote(string uri)
+        {
+            try
+            {
+                var localFilePath = new List<string>() { "." };
+                localFilePath.AddRange(new Uri(uri).Segments.Skip(1));
+
+                var localFile = string.Join("/", localFilePath);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(localFile));
+
+                if (File.Exists(localFile))
+                    return true;
+
+                using (var netStream = SendGet(uri))
+                {
+                    if (netStream != null)
+                    {
+                        Console.WriteLine("Downloading");
+                        Console.WriteLine("     From: {0}", uri);
+                        Console.WriteLine("     To:   {0}", localFile);
+
+                        using (var fStream = File.OpenWrite(localFile))
+                            netStream.CopyTo(fStream);
+
+                    }
+                }
+
+                return new FileInfo(localFile).Length != 0;
+            } catch { return false; }
         }
 
         private static void DownloadClientBuild(string programName, int build)
@@ -217,12 +364,40 @@ namespace WMPQ
 
         private static Stream SendGet(string address)
         {
-            var webRequest = (HttpWebRequest)WebRequest.Create(address);
-            webRequest.Method = "GET";
+            try
+            {
+                var webRequest = (HttpWebRequest) WebRequest.Create(address);
+                webRequest.Method = "GET";
 
-            var responseMsg = (HttpWebResponse)webRequest.GetResponse();
-            if (responseMsg.StatusCode == HttpStatusCode.OK)
-                return responseMsg.GetResponseStream();
+                var responseMsg = (HttpWebResponse) webRequest.GetResponse();
+                if (responseMsg.StatusCode == HttpStatusCode.OK)
+                    return responseMsg.GetResponseStream();
+            }
+            catch
+            {
+                try
+                {
+                    var uri = new Uri(address);
+                    var lst = new List<string>(uri.Segments);
+
+                    var sub = lst[lst.Count - 1].IndexOf('-');
+                    var prgm = lst[lst.Count - 1].Substring(0, sub);
+                    lst[lst.Count - 1] = lst[lst.Count - 1].Replace(prgm, prgm.ToLower());
+
+                    var b = new UriBuilder(uri);
+                    b.Path = string.Join("", lst);
+                    var webRequest = (HttpWebRequest) WebRequest.Create(b.ToString());
+                    webRequest.Method = "GET";
+
+                    var responseMsg = (HttpWebResponse) webRequest.GetResponse();
+                    if (responseMsg.StatusCode == HttpStatusCode.OK)
+                        return responseMsg.GetResponseStream();
+                }
+                catch
+                {
+                    return null;
+                }
+            }
 
             return null;
         }
