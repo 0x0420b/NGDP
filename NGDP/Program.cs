@@ -171,7 +171,7 @@ namespace NGDP
                 {
                     var shouldWarnEveryone = channelInfo.Filters.Any(f => f == branchName);
                     if (shouldWarnEveryone || channelInfo.ListenFor == "*" || string.IsNullOrEmpty(channelInfo.ListenFor))
-                        knownServerPair.Value.SendMessage(SendType.Message, "#" + channelInfo.Name, $"Build {buildName} deployed on branch {branchName} [{regionCode.ToUpperInvariant()}].");
+                        knownServerPair.Value.SendMessage(SendType.Message, "#" + channelInfo.Name, $"Build {buildName} deployed on NGDP channel {branchName} ({regionCode.ToUpperInvariant()}).");
 
                     var distinctSubscribers = channelInfo.GetSubscribers(branchName).ToArray();
                     if (distinctSubscribers.Length == 0)

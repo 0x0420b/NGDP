@@ -61,9 +61,9 @@ namespace NGDP
                     Scanner.QueueInitialUpdate(currentBuildInfo);
             }
 
-            foreach (var currentBuild in RemoteBuildManager.Builds.Values.Where(b => b.JustDeployed))
+            foreach (var currentBuild in RemoteBuildManager.Builds.Values.Where(b => b.JustDeployed && b.Channel == ChannelName))
             {
-                currentBuild.JustDeployed = true;
+                currentBuild.JustDeployed = false;
                 var coalescedRegions = string.Join(", ", currentBuild.Regions).ToUpperInvariant();
 
                 if (!silent)
